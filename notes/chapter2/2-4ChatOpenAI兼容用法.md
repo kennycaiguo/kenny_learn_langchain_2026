@@ -72,3 +72,58 @@ resp = llm.invoke("奇门遁甲是什么")
 print(resp.text)
 ```
 
+## 用兼容语法调用Groq大模型，使用ChatOpenAI类
+
+```
+import os
+from langchain_openai import ChatOpenAI
+# Groq大模型需要把api key设置到GROQ_API_KEY环境变量中，否则无法使用
+
+# 初始化 ChatOpenAI 调用 Groq 模型
+llm = ChatOpenAI(
+    model="openai/gpt-oss-120b",  # 或者是 Groq 支持的其他模型名字
+    temperature=0.7,
+    api_key=os.environ.get("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1",  # 指向 Groq 的 OpenAI 兼容接口
+)
+
+# 调用模型
+response = llm.invoke("你好法语怎么说")
+print(response.content)
+```
+
+
+
+## 模型输出
+
+![image-20260908134455017](./2-4ChatOpenAI兼容用法.assets/image-20260908134455017.png)
+
+## 用兼容语法调用Groq大模型，使用init_chat_model函数
+
+```
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage
+
+
+llm = init_chat_model(
+    model="openai/gpt-oss-120b",  # 指定具体的 Groq 模型名称
+    model_provider="groq",    # 明确指定提供商为 groq
+    temperature=0.7
+)
+
+# 调用模型
+messages = [
+    HumanMessage(content="你好的德文")
+]
+
+response = llm.invoke(messages)
+
+# 打印输出结果
+print(response.content)
+```
+
+
+
+## 模型输出
+
+![image-20260908134733935](./2-4ChatOpenAI兼容用法.assets/image-20260908134733935.png)
