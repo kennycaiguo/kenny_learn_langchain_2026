@@ -114,3 +114,56 @@ user:kennycai2
 
 pwd:name+year
 
+
+
+# SilicoFlow
+
+## 官网：https://www.siliconflow.com/ ，可以使用Google账号登录，然后需要获取一个api key保存到.env文件里面，并且保存base url
+
+### 示例代码
+
+```
+from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage,SystemMessage
+import os
+
+load_dotenv(override=True)
+SiliconFlow_API_KEY = os.getenv("SiliconFlow_API_KEY")
+SiliconFlow_BASE_URL = os.getenv("SiliconFlow_BASE_URL")
+
+llm = ChatOpenAI(
+    model="Qwen/Qwen3-32B",
+    api_key=SiliconFlow_API_KEY,
+    base_url=SiliconFlow_BASE_URL
+)
+
+messages = [
+  SystemMessage("""你是一个消息抽取器。你会收到来自不同发言者的user消息。每条消息可能带有name字段。
+   你的任务是：严格根据每条消息的name提取发言者及其观点，并输出JSON。禁止使用”第一人称/第二人称“这种称呼。
+   若某条消息没有name，则输出unknown。输出格式：{\"speakers\":[{\"name\":\"...\",\"claim\":\"}]}"""),
+  HumanMessage(
+       content="我认为日本的首都是大阪",
+       name="Bob"
+  ),
+  HumanMessage(
+      content="我认为日本的首都是东京",
+      name="Mary"
+  ),
+  HumanMessage(
+      content="请列出谁说了什么，不要判断对错",
+      name="audience"
+  )
+]
+
+resp = llm.invoke(messages)
+resp.pretty_print()
+```
+
+
+
+模型输出：
+
+![image-20260909191214932](./2-5使用OpenRouter和CloseAI和SiloconFlow中转平台调用大模型.assets/image-20260909191214932.png)
+
+## 一个api key只能够使用一次
