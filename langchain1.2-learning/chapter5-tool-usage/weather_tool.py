@@ -37,6 +37,32 @@ def query_weather(city="beijing", units="metric", language="zh_cn"):
          print("响应数据：", response.text)
          return {"error":"weather api 调用失败。。。"}
 
+
+
+def query_weather_web(city="Beijing", aqi="no", language="zh_cn"):
+     appid = os.getenv("Weather_api_key")
+     # 构建请求URL
+     url = "https://api.weatherapi.com/v1/current.json"
+     # 设置查询参数
+     params = {
+         "q": city,                 # 查询的城市，默认为北京
+         "key": appid,          # API密钥
+         "aqi": aqi,            # 测量单位，默认为摄氏度
+         "lang": language           # 输出语言，默认为简体中文
+     }
+     # 发送GET请求
+     response = requests.get(url, params=params)
+     # 检查响应状态
+     if response.status_code == 200:
+         # 解析响应数据
+         data = response.json()
+         return data
+     
+     else:
+         print(f"查询失败，状态码：{response.status_code}")
+         print("响应数据：", response.text)
+         return {"error":"weather api 调用失败。。。"}
+     
 if __name__ == '__main__':
     weather_data = query_weather(city="guangzhou")  
     model = ChatOpenAI(
