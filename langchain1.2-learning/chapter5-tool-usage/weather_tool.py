@@ -3,10 +3,8 @@ from langchain_openai import ChatOpenAI
 import requests
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
-
-
 def query_weather(city="beijing", units="metric", language="zh_cn"):
+     load_dotenv(override=True)
      appid = os.getenv("OpenWeather_APi_key")
      # 构建请求URL
      url = "https://api.openweathermap.org/data/2.5/weather"

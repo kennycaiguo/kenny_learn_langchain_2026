@@ -1063,19 +1063,250 @@ for msg in msgs:
 
 ![image-20260921210239428](./ch5-工具调用.assets/image-20260921210239428.png)
 
+### 为了方便编程，我写了一个model_utils.py文件，内容如下
+
+```
+def create_qwen3_instance():
+    from langchain_openai import ChatOpenAI
+    # 创建模型实例
+    model = ChatOpenAI(
+        model="qwen3-vl:latest",
+        api_key="sk12345",
+        base_url="http://localhost:11434/v1",
+        temperature=0.1
+    )    
+
+    return model
+```
+
+### 还写了一个tool_utils.py,内容如下，工具也可以从外表导入
+
+```
+## 定义工具
+from langchain_core.tools import tool
+from dotenv import load_dotenv
+import requests
+import os
+
+
+# 工具1
+@tool(parse_docstring=True)
+def get_stock_price(company:str,timeframe: str="today") ->str:
+    """ 
+    获取指定公司的股票在指定时间的价格
+
+    Args:
+         company : 具体的公司名称
+         timeframe : 时间范围 (today-今日,week-本周,month-本月)
+
+    """
+    print(timeframe)
+    stock_data = {
+        "苹果公司":{"today":185.2,"week":183.5,"month":180.75},
+        "谷歌公司":{"today":15.42,"week":15.2,"month":14.85},
+        "微软公司":{"today":415.86,"week":412.30,"month":405.42},
+    }
+
+    if company in stock_data:
+        price = stock_data[company].get(timeframe,"")
+        return f"{company} {timeframe}的股价是{price}美元"
+    else:
+        return f"没有找到{company}的股票信息。"
+
+## 工具2
+@tool(parse_docstring=True)
+def search_news(company:str) ->str:
+    """ 
+    搜索指定公司的新闻
+
+    Args:
+         company : 公司名称，如：谷歌公司
+
+    Returns:
+         指定公司的新闻     
+    """
+    news_data = {
+        "苹果公司":[
+            "发布新款Iphone，股价上涨3%","苹果与欧盟达成反垄断和解协议","苹果将在印度扩大生产规模"
+        ],
+
+        "谷歌公司":[
+           "谷歌发布AI新模型，性能提升20%","谷歌与OpenAI合作，开发AI新模型","谷歌在欧洲开展AI新研究项目",
+        ],
+
+        "微软公司":[
+           "微软Azuze云业务季度增长超预期","微软完成对Nuance公司的收购","微软推出新一代AI助手Copilot"
+        ],
+    }
+
+    if company in news_data:
+        return "\n".join(news_data[company])
+    else:
+        return f"找不到关于{company}的新闻"
+
+## 使用docstring方式不需要arg_schema
+@tool(parse_docstring=True)
+def get_weather2(city:str="北京",if_forecast:bool=False):
+    """ 
+    查询当天的天气，可以包含明天的天气预报
+
+    Args:
+         city : 具体的城市
+         if_forecast : 是否包含明天的天气预报
+
+    Returns:
+         城市的当天的天气，可以包含明天的天气预报     
+    """
+    res = f"{city}明天天气不错"
+    if if_forecast:
+        res += f"\n{city}明天有大到暴雨"
+    return res 
+
+## 真正可以查询天气的工具
+@tool
+def query_weather_from_web(city="Beijing", aqi="no", language="zh_cn"):
+     """ 
+             获取指定城市的天气信息
+             参数：
+             city：城市的名称，如"上海"
+             api_key: OpenWeather的api key
+             返回值：
+                         天气信息字符串
+          
+    """ 
+     load_dotenv(override=True)
+     appid = os.getenv("Weather_api_key")
+     # 构建请求URL
+     url = "https://api.weatherapi.com/v1/current.json"
+     # 设置查询参数
+     params = {
+         "q": city,                 # 查询的城市，默认为北京
+         "key": appid,          # API密钥
+         "aqi": aqi,            # 测量单位，默认为摄氏度
+         "lang": language           # 输出语言，默认为简体中文
+     }
+     # 发送GET请求
+     response = requests.get(url, params=params)
+     # 检查响应状态
+     if response.status_code == 200:
+         # 解析响应数据
+         data = response.json()
+         return data
+     
+     else:
+         print(f"查询失败，状态码：{response.status_code}")
+         print("响应数据：", response.text)
+         return {"error":"weather api 调用失败。。。"}
+         
+
+
+```
+
+
+
 # 5.拓展：强制使用工具
 
 ## 5.1 tool_choice参数说明
 
+![image-20260922142541900](./ch5-工具调用.assets/image-20260922142541900.png)
+
+![image-20260922142622219](./ch5-工具调用.assets/image-20260922142622219.png)
+
 ## 5.2 none值举例
 
-## 5.3 auto值举例
+### 即使你绑定了工具，只要你添加了tool_choice="none",模型就不会调用工具（既然你不使用工具，那么你绑定它干嘛？）
 
-## 5.4 required值举例
+![image-20260922144449657](./ch5-工具调用.assets/image-20260922144449657.png)
+
+## 5.3 auto值举例，auto是默认值，模型会自己推断该不该使用工具，如果提示词需要使用工具，就会调用工具
+
+![image-20260922151626242](./ch5-工具调用.assets/image-20260922151626242.png)
+
+## 如果你的提示词和工具没有任何关系，模型就不会使用它，即使你绑定了工具。
+
+![image-20260922151911415](./ch5-工具调用.assets/image-20260922151911415.png)
+
+## 5.4 required值举例，强制要求模型使用工具
+
+### 当你把tool_choice上涨位required，如果你的提示词需要使用到工具，模型会调用工具，那是很自然的
+
+![image-20260922153143630](./ch5-工具调用.assets/image-20260922153143630.png)
+
+### 然而，因为你强制要求模型一定要使用工具，即使你的提示词里面没有需要调用工具，模型也会调用工具
+
+![image-20260922153424999](./ch5-工具调用.assets/image-20260922153424999.png)
+
+### 注意：现在有一些模型已经非常聪明，即使你强制它使用工具，它在不需要工具的时候还是不会使用工具
+
+#### 想一想，为什么需要tool_choice这个参数？
+
+`tool_choice` 参数用于**控制和干预大模型在面对注册工具时的选择行为**。
+
+虽然开发者在请求时通过 `tools` 传入了可用的工具列表，但模型默认会根据用户的输入**自主判断**是否需要调用工具。引入 `tool_choice` 参数的核心原因在于满足**精准控制、稳定工作流和规避模型误判**的需求：
+
+核心控制模式
+
+通过设置不同的 `tool_choice` 值，可以对模型的行为进行精细化调整： 
+
+- **`auto`（默认）**：模型自己决定是直接回复文本，还是调用一个或多个工具。
+- **`none`**：即使提供了工具列表，也**禁止**模型调用任何工具，强行让模型只生成文本回复。
+- **强制特定工具（Specific Tool）**：指定某一个具体的工具名称（如 `get_weather`），强制模型在当前步**必须**调用该工具，哪怕从逻辑上看直接回答也可以。
+- **`required` / `any`**：强制模型**至少调用一个**工具，不允许直接返回纯文本回答。 
+- 为什么在实际开发中不可或缺？
+
+- **打破模型惰性（避免漏掉调用）**：有时用户的输入比较含糊，或者大模型倾向于用自带的陈旧知识直接回答，导致它“懒得”去调用外部实时搜索或查询工具。使用 `tool_choice` 强行约束后，可以杜绝漏调。
+
+- **构建确定性的工作流（Workflow / Agent）**：在复杂的 Agent 编排中，某一个固定的执行步骤（如第一步必须先检索数据库）容不得半点随机性。通过锁定 `tool_choice`，可以确保流程按照代码预期的那样走完固定环节，防止大模型“自由发挥”把流程带偏。
+
+- **节省 Token 与提升响应速度**：在某些明确知道必须使用特定工具的场景下，直接指定工具可以减少模型在“要不要调用”之间的纠结和不确定性输出。
 
 ## 5.5强制调用特定的工具
 
+### 我们还可以给模型绑定一系列的工具，但是规定它只能使用我们指定的工具
 
+![image-20260922154627636](./ch5-工具调用.assets/image-20260922154627636.png)
+
+### 同样，当你规定了模型必须使用你指定的工具，即使你的提示词没有必要用到工具，模型也会调用指定的工具
+
+![image-20260922155045600](./ch5-工具调用.assets/image-20260922155045600.png)
+
+## 注意，required和强制规定使用工具并不是所有模型厂商都支持，Qwen模型就只是支持"none"和"auto"
+
+## 6.工具使用总结
+
+### 1>.工具需要清晰的描述
+
+![image-20260922155553225](./ch5-工具调用.assets/image-20260922155553225.png)
+
+### 2> 工具的功能尽可能的单一，不要在一个工具里面做很多事情
+
+![image-20260922155648270](./ch5-工具调用.assets/image-20260922155648270.png)
+
+### 3》如何处理工具调用失败
+
+#### 三层防护
+
+#### 3.1 工具内部处理
+
+![image-20260922155932401](./ch5-工具调用.assets/image-20260922155932401.png)
+
+#### 3.2 Agent级重试
+
+![image-20260922160050815](./ch5-工具调用.assets/image-20260922160050815.png)
+
+#### 3.3 调用级重试
+
+![image-20260922160333689](./ch5-工具调用.assets/image-20260922160333689.png)
+
+
+
+### 4》返回字符串
+
+![image-20260922160841838](./ch5-工具调用.assets/image-20260922160841838.png)
+
+### 5.选择同步 vs 异步
+
+![image-20260922161013696](./ch5-工具调用.assets/image-20260922161013696.png)
 
 
 

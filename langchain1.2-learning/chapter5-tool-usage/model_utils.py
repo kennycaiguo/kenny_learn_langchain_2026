@@ -11,3 +11,15 @@ def create_qwen3_instance():
     )    
 
     return model
+
+def create_gemma4_instance():
+    from langchain_openai import ChatOpenAI
+    # 创建模型实例
+    model = ChatOpenAI(
+        model="gemma4:latest",
+        api_key="ollama",
+        base_url="http://localhost:11434/v1",
+        temperature=0.1
+    )    
+
+    return model
