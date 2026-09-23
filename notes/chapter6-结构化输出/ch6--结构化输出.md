@@ -16,7 +16,86 @@
 
 ## 2.1 模式1：Pydantic
 
+![image-20260922185421570](./ch6--结构化输出.assets/image-20260922185421570.png)
+
 ### 2.1.1 基本使用
+
+![image-20260922185731395](./ch6--结构化输出.assets/image-20260922185731395.png)
+
+#### 案例
+
+```
+# 1.初始化模型
+import sys
+from pathlib import Path
+from rich import print as rprint
+from pydantic import BaseModel, Field
+
+# 获取当前文件的父目录的父目录（即 my_project 根目录）
+root_path = Path(__file__).resolve().parent.parent
+sys.path.append(str(root_path))
+
+from utils.model_utils import create_qwen3_instance
+
+# 定义输出格式类，需要使用pydantic里面的BaseModel类作为基类
+class Person(BaseModel):
+    """人物信息"""
+    name:str = Field(description="姓名")
+    age:int = Field(description="年龄")
+    job:str = Field(description="职业")
+
+model = create_qwen3_instance()
+
+# 设置模型输出格式
+ret_model = model.with_structured_output(Person)
+
+result = ret_model.invoke("李明是一名30岁的软件工程师")
+rprint(result)
+```
+
+
+
+#### 模型输出
+
+![image-20260922202449328](./ch6--结构化输出.assets/image-20260922202449328.png)
+
+#### 案例2.文本情感分析
+
+```
+## 1.初始化模型
+# from langchain.messages import HumanMessage, ToolMessage
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
+
+# 创建模型实例
+model = ChatOpenAI(
+    model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+    temperature=0.1
+)   
+
+# 定义输出格式
+class SentimentAnalysis(BaseModel):
+    sentiment: str= Field(description="情感倾向:positive/nagative/neutral")
+    confidence: float = Field(description="置信度,0-1之间")
+    keywords: list[str]= Field(description="关键词列表")
+# 设置模型的输出格式
+ret_model = model.with_structured_output(SentimentAnalysis)
+txt = "这个课程内容很实用，学到很多知识，强烈推荐!"
+result = ret_model.invoke(f"分析以下文本的情感：{txt}")
+
+print(f"类型：{type(result)}")
+print(f"情感：{result.sentiment}")
+print(f"置信度：{result.confidence}")
+print(f"关键词：{result.keywords}")
+```
+
+
+
+#### 模型输出
+
+![image-20260922211613888](./ch6--结构化输出.assets/image-20260922211613888.png)
 
 ### 2.1.2 高级特性
 
