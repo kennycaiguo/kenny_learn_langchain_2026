@@ -101,9 +101,49 @@ print(f"关键词：{result.keywords}")
 
 #### 情况1：可选字段
 
+![image-20260923170814674](./ch6--结构化输出.assets/image-20260923170814674.png)
+
+![image-20260923185729144](./ch6--结构化输出.assets/image-20260923185729144.png)
+
+##### Optional关键字的用法
+
+```
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
+from typing import Optional
+
+# 创建模型实例
+model = ChatOpenAI(
+    model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)   
+
+class Person(BaseModel):
+    """人物信息"""
+    name:str = Field(description="姓名")
+    age:Optional[int] = Field(description="年龄") #设置可选字段
+    job:str = Field(description="职业")
+
+from rich import print as rprint
+# 设置模型输出格式,我们规定它的输出格式位我们的Person类的对象
+ret_model = model.with_structured_output(Person)
+
+result = ret_model.invoke("小利是一名司机") # 我们特意不传递年龄
+rprint(result)  
+```
+
+
+
+#### 其实对应本地大模型来说，有没有Optional都是一样的，模型会自己编造一个年龄
+
 #### 情况2：默认值
 
+
+
 #### 情况3：枚举类型
+
+
 
 #### 情况4：列表提取
 
@@ -137,3 +177,18 @@ print(f"关键词：{result.keywords}")
 
 # 4.获取结构化结果的方式
 
+
+
+
+
+
+
+
+
+# 扩展：激活pycharm2025
+
+网站：https://blog.idejihuo.com/jetbrains/intellij-idea-2025-2-latest-activation-tutorial-permanent-activation-code-cracking-tool-2099.html
+
+工具下载： https://fileio.lanzouw.com/ibL0z3d03sng
+
+下载后解压缩，然后以管理员的身份运行jetbra-free-windows7-amd64.exe，会打开一个本地网站，我们只需要配置好名字和过期时间，点击submit，然后用鼠标点击我们需要激活的软件，出现cracked，说明激活成功
