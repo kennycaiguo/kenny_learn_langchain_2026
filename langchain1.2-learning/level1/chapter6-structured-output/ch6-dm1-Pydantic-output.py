@@ -23,4 +23,4 @@ model = create_qwen3_instance()
 ret_model = model.with_structured_output(Person)
 
 result = ret_model.invoke("李明是一名30岁的软件工程师")
-rprint(result)
+rprint(result)  # Person(name='李明', age=30, job='软件工程师')。输入pycharm报错，但是程序可以正常运行

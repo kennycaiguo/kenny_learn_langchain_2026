@@ -38,3 +38,5 @@ dashscope
 
 
 
+
+typing-extensions
