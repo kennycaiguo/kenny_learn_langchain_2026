@@ -141,7 +141,7 @@ def get_news() ->str:
     return "最近AI智能体非常火爆，有大量的工作岗位缺口，需求量非常大!!!"
 
 # 新闻api接口的使用
-def query_news_from_web(query="tesla", date="2026-08-30"):
+def query_news_from_web(query="tesla", date="2026-09-30"):
     """
             通过NewApi获取新闻内容
             参数：

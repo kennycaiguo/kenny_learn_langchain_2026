@@ -698,17 +698,178 @@ rprint(resp)
 
 # 5.Agent的高级用法1：实战Agent名称
 
+![image-20261001152137558](./ch7-agent学习.assets/image-20261001152137558.png)
+
 ## 5.1用法
 
-## 5.2 经典使用场景
+### 实例代码
+
+```
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain.agents import create_agent
+from rich import print as rprint
+
+agent = create_agent(
+    "ollama:qwen3-vl:latest",  # 必须给出模型提供商比,如这里的ollama:
+    name="Linda", #给agent起名字
+    tools=[]
+)
+
+msgs = [
+    SystemMessage("""
+    你是一个非常友好的ai助手。
+    """),
+    HumanMessage("中国古代的四大美女都有谁？")
+]
+resp = agent.invoke({"messages":msgs})
+
+rprint(resp)
+
+```
 
 
+
+### 然后我们可以在agent的输出中找到我们给它的名字
+
+![image-20261001173132502](./ch7-agent学习.assets/image-20261001173132502.png)
+
+## 5.2 经典使用场景，其实只是在多智能体的场景中有用
+
+![image-20261001173638884](./ch7-agent学习.assets/image-20261001173638884.png)
 
 # 6.Agent的高级用法2：系统提示词
 
+![image-20261001173745783](./ch7-agent学习.assets/image-20261001173745783.png)
 
+![image-20261001181906924](./ch7-agent学习.assets/image-20261001181906924.png)
+
+![image-20261001182103399](./ch7-agent学习.assets/image-20261001182103399.png)
+
+### 实例代码1，这里我们结合system_prompt参数和DuckDuckGo搜索工具来举例，需要先安装这两个工具
+
+```
+pip install -U duckduckgo-search <br>
+pip install -U ddgs
+```
+
+#### 举例1代码,使用DuckDuckGoSearchRun
+
+```
+from langchain_community.tools import DuckDuckGoSearchRun
+import os
+
+from langchain.agents import create_agent
+from dotenv import load_dotenv
+from rich import print as rprint
+
+load_dotenv(override=True)
+ddg = DuckDuckGoSearchRun()
+
+agent = create_agent(
+    "ollama:carstenuhlig/omnicoder-9b:latest",  # 必须给出模型提供商比,如这里的ollama，这个模型还好
+    tools=[ddg],
+    system_prompt="你是一个全能的AI助手，你很擅长使用DuckDuckGo来搜索"
+)
+# print(type(agent))
+resp = agent.invoke({
+    "messages":[
+        {"role":"user","content":"请帮我查一下2025诺贝尔和平奖的得主？"}
+    ]
+})
+
+rprint(resp)
+
+```
+
+
+
+#### agent输出
+
+![image-20261001202721944](./ch7-agent学习.assets/image-20261001202721944.png)
+
+#### 举例代码2.使用DuckDuckGoSearchResults
+
+```
+from langchain_community.tools import DuckDuckGoSearchRun, DuckDuckGoSearchResults
+import os
+
+from langchain.agents import create_agent
+from dotenv import load_dotenv
+from langchain_tavily import TavilyResearch
+
+load_dotenv(override=True)
+ddg = DuckDuckGoSearchResults()
+
+agent = create_agent(
+    "ollama:carstenuhlig/omnicoder-9b:latest",  # 必须给出模型提供商比,如这里的ollama，这个模型还好
+    tools=[ddg],
+    system_prompt="你是一个全能的AI助手，你很擅长使用DuckDuckGo来搜索"
+)
+# print(type(agent))
+resp = agent.invoke({
+    "messages":[
+        {"role":"user","content":"请帮我查一下2026年足球世界杯的主办国是那个国家？"}
+    ]
+})
+
+
+
+for msg in resp['messages']:
+    msg.pretty_print()
+```
+
+
+
+#### agent输出
+
+![image-20261001203803911](./ch7-agent学习.assets/image-20261001203803911.png)
+
+#### 举例3.使用DuckDuckGoSearchResults来查询新闻
+
+```
+from langchain_community.tools import DuckDuckGoSearchRun, DuckDuckGoSearchResults
+import os
+
+from langchain.agents import create_agent
+from dotenv import load_dotenv
+from langchain_tavily import TavilyResearch
+
+load_dotenv(override=True)
+ddg = DuckDuckGoSearchResults(backend='news') # 设置DuckDuckGo专注于新闻
+
+agent = create_agent(
+    "ollama:carstenuhlig/omnicoder-9b:latest",  # 必须给出模型提供商比,如这里的ollama，这个模型还好
+    tools=[ddg],
+    system_prompt="你是一个全能的AI助手，你很擅长使用DuckDuckGo来搜索"
+)
+# print(type(agent))
+resp = agent.invoke({
+    "messages":[
+        {"role":"user","content":"华为最近有什么新闻？"}
+    ]
+})
+
+
+
+# from IPython.display import Image, display
+#
+# display(Image(agent.get_graph().draw_mermaid_png()))
+rprint(resp)
+```
+
+
+
+#### agent 输出
+
+![image-20261001204900281](./ch7-agent学习.assets/image-20261001204900281.png)
+
+#### DuckDuckGo官方文档
+
+#### https://duckduckgo.com/duckduckgo-help-pages/
 
 # 7.Agent的高级用法3：结构化输出
+
+![image-20261001204028099](./ch7-agent学习.assets/image-20261001204028099.png)
 
 ## 7.1模型与Agent的结构化输出对比
 
