@@ -873,15 +873,162 @@ rprint(resp)
 
 ## 7.1模型与Agent的结构化输出对比
 
+![image-20261002195543700](./ch7-agent学习.assets/image-20261002195543700.png)
+
 ## 7.2 结构化输出的4种策略
+
+![image-20261002195732924](./ch7-agent学习.assets/image-20261002195732924.png)
 
 ### ①ProviderStrategy
 
-### ②ToolStrategy
+![image-20261002200258974](./ch7-agent学习.assets/image-20261002200258974.png)
+
+#### 举例代码
+
+```
+from pydantic import BaseModel, Field
+from langchain.agents.structured_output import ProviderStrategy
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="mistral-nemo:latest",
+    model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+# 2.使用Pydantic结构方式来定义一个类
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱")
+    phone: str = Field(description="用户电话")
+
+
+# 3.创建agent
+agent = create_agent(
+    model=model,
+    tools=[],
+    response_format=ProviderStrategy(ContactInfo), # 结构化输出的第一种方式
+    system_prompt="Agent的行为指令" # 可选
+)
+# 3.调用
+result = agent.invoke({
+    "messages":[{"role":"user","content":"请提取项目文本的用户信息：王小明的email是 wxm1234@gmail.com,电话是13532677677"}]
+})
+
+rprint(result)
+```
+
+
+
+#### agent输出：
+
+![image-20261002202341085](./ch7-agent学习.assets/image-20261002202341085.png)
+
+### ②ToolStrategy,前提是模型支持工具调用
+
+![image-20261002201454018](./ch7-agent学习.assets/image-20261002201454018.png)
+
+#### 举例代码
+
+```
+from pydantic import BaseModel, Field
+from langchain.agents.structured_output import ToolStrategy
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="mistral-nemo:latest",
+    model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+# 2.使用Pydantic结构方式来定义一个类
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱")
+    phone: str = Field(description="用户电话")
+
+
+# 3.创建agent
+agent = create_agent(
+    model=model,
+    tools=[],
+    response_format=ToolStrategy(ContactInfo), # 结构化输出的第一种方式
+    system_prompt="Agent的行为指令" # 可选
+)
+# 3.调用
+result = agent.invoke({
+    "messages":[{"role":"user","content":"请提取项目文本的用户信息：王小明的email是 wxm1234@gmail.com,电话是13532677677"}]
+})
+
+rprint(result)
+```
+
+
+
+#### agent输出
+
+![image-20261002202842128](./ch7-agent学习.assets/image-20261002202842128.png)
 
 ### ③type/AutoStrategy
 
+![image-20261002202714928](./ch7-agent学习.assets/image-20261002202714928.png)
+
+#### 举例代码
+
+```
+from pydantic import BaseModel, Field
+from langchain.agents.structured_output import AutoStrategy
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="mistral-nemo:latest",
+    model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+# 2.使用Pydantic结构方式来定义一个类
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱")
+    phone: str = Field(description="用户电话")
+
+
+# 3.创建agent
+agent = create_agent(
+    model=model,
+    tools=[],
+    response_format=AutoStrategy(ContactInfo), # 结构化输出的第一种方式
+     # response_format=ContactInfo, # 也可以这么写，这就是所谓的type，也就是我们的自定义类型，不过将来会不支持这种方式
+    system_prompt="Agent的行为指令" # 可选
+)
+# 3.调用
+result = agent.invoke({
+    "messages":[{"role":"user","content":"请提取项目文本的用户信息：王小明的email是 wxm1234@gmail.com,电话是13532677677"}]
+})
+
+rprint(result)
+```
+
+
+
+#### agent输出
+
+![image-20261002203348687](./ch7-agent学习.assets/image-20261002203348687.png)
+
+![image-20261002203920611](./ch7-agent学习.assets/image-20261002203920611.png)
+
 ### ④None
+
+![image-20261002204028244](./ch7-agent学习.assets/image-20261002204028244.png)
 
 ## 7.3ToolStrategy详解
 
