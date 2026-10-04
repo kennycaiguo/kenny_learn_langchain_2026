@@ -1032,11 +1032,148 @@ rprint(result)
 
 ## 7.3ToolStrategy详解
 
+![image-20261003184126802](./ch7-agent学习.assets/image-20261003184126802.png)
+
 ### 7.3.1 结构化输出：schema参数
+
+![image-20261003185203672](./ch7-agent学习.assets/image-20261003185203672.png)
 
 #### 输出模式1： Pydantic
 
+![image-20261003185233033](./ch7-agent学习.assets/image-20261003185233033.png)
 
+##### 举例代码
+
+```
+from pydantic import BaseModel, Field
+from langchain.agents.structured_output import AutoStrategy
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    model="carstenuhlig/omnicoder-9b:latest",
+    # model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+# 2.使用Pydantic结构方式来定义一个类
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱")
+    phone: str = Field(description="用户电话")
+
+# 3.创建agent
+agent = create_agent(
+    model=model,
+    tools=[],
+    response_format=AutoStrategy(schema=ContactInfo), # 结构化输出的第3种方式
+    system_prompt="Agent的行为指令" # 可选
+)
+# 3.调用
+result = agent.invoke({
+    "messages":[{"role":"user","content":"请提取项目文本的用户信息：小李的email是 wxm1234@gmail.com,电话是13532677677"}]
+})
+
+rprint(result)
+```
+
+##### agent输出
+
+![image-20261003190318774](./ch7-agent学习.assets/image-20261003190318774.png)
+
+##### 举例2代码
+
+```
+from langchain_core.tools import tool
+from langchain_core.messages import SystemMessage
+from pydantic import BaseModel, Field
+from langchain.agents.structured_output import AutoStrategy, ToolStrategy
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from typing import Literal
+
+## 1.定义工具
+@tool(parse_docstring=True)
+def search_customer_database(query: str)->str:
+     """
+      在客户数据库搜索信息
+
+     Args:
+            query: str,客户查询字符串，如："张三" 或 "李四"
+
+     Returns:
+            str: 客户记录字符串，包括客户姓名、等级、最近购买日期和累计消费
+     """
+     if "张三" in query.lower():
+          return "客户记录: 张三，VIP客户，最近购买日期：2026-01-15，累计消费：$15,000"
+     elif "李四" in query.lower():
+          return "客户记录: 李四，普通客户，最近购买日期：2025-12-20，累计消费：$3,200"
+     else:
+         return f"关于客户{query}，无记录"
+
+@tool(parse_docstring=True)
+def send_email(customer: str)->str:
+    """
+      发送感谢邮件
+
+     Args:
+            customer: str,客户名字，如："张三" 或 "李四"
+
+     Returns:
+            str: 确认消息，保护已发送的客户名称
+     """
+    return f"已向客户：{customer}发送感谢邮件"
+
+# 2.初始化模型
+model = ChatOpenAI(
+    # model="carstenuhlig/omnicoder-9b:latest", # 在这里不好用
+    model="qwen3-vl:latest", # ok
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 3.定义Pydantic结构类
+class CustomerAnalysis(BaseModel):
+    """客户分析报告"""
+    customer_name: str = Field(None,description="客户姓名")
+    customer_tier: Literal["潜在客户","普通客户","VIP客户","流失风险"] = Field("潜在客户",
+                                    description="客户只能是：潜在客户、普通客户、VIP客户和流失风险")
+    recent_activity: str = Field(None,description="最近活动")
+    spending_level: Literal["低","中","高"] = Field(None,description="消费水平")
+    send_email: bool = Field(False,description="是否已发送感谢邮件")
+
+
+# 4.定义agent
+agent = create_agent(
+    model=model,
+    tools=[search_customer_database,send_email],
+    response_format=ToolStrategy(schema=CustomerAnalysis), # 结构化输出的第3种方式
+    system_prompt=SystemMessage(content="""
+    请分析知道客户的情况:
+    1.先搜索客户数据库了解最新情况
+    2.如果是VIP客户，则发送感谢邮件
+    3.基于搜索结果生成结构化分析报告
+    4.如果用户提问与客户记录无关或者找不到客户信息，
+    则返回空对象，不发送感谢邮件。
+    """)
+)
+# 3.调用
+result = agent.invoke({
+    "messages":[{"role":"user","content":"请分析客户张三"}]
+})
+
+rprint(result)
+
+```
+
+
+
+##### agent输出
+
+![image-20261003203839682](./ch7-agent学习.assets/image-20261003203839682.png)
 
 #### 输出模式2 TypeDict
 
