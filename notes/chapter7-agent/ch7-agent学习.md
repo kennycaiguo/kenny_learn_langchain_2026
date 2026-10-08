@@ -1779,17 +1779,299 @@ rprint(result)
 
 ![image-20261006201223931](./ch7-agent学习.assets/image-20261006201223931.png)
 
+![image-20261007171714978](./ch7-agent学习.assets/image-20261007171714978.png)
+
+### 情况1：设置为True/False/固定字符串
+
+![image-20261007172053160](./ch7-agent学习.assets/image-20261007172053160.png)
+
+#### 举例1：handle_errors=True
+
+```
+from typing import Union
+
+from langchain.agents.structured_output import ToolStrategy
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    model="carstenuhlig/omnicoder-9b:latest",
+    # model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+class ContactInfo(BaseModel):
+    """联系人信息"""
+    name: str = Field(description="姓名")
+    email: str = Field(description="邮箱")
+
+class EnventDetails(BaseModel):
+    """活动详情"""
+    event_name: str = Field(description="活动名称")
+    date: str = Field(description="活动日期")
+
+agent = create_agent(
+    model=model,
+    response_format=ToolStrategy(
+        Union[ContactInfo, EnventDetails,], ## 注意Union里面的东西只能取一个
+        tool_message_content="提取完成！",
+        handle_errors=True
+    )
+)
 
 
-### 举例1：设置为True/False/固定字符串
+result = agent.invoke({
+    "messages":[{
+        "role":"user",
+        "content":"请提取以下文本中的内容：张三，电子邮箱：zhang3@atguigu.com,活动名称：公司年会，活动日期：2026-7-15"
+    }]
+})
 
-### 举例2：设置为指定异常类型
+rprint(result)
+```
 
-### 举例3：设置为自定义错误处理函数
+#### agent 输出
+
+![image-20261007180956646](./ch7-agent学习.assets/image-20261007180956646.png)
+
+#### 举例2 hanlde_errors=False，没有捕获异常，程序会崩溃
+
+```
+from typing import Union
+
+from langchain.agents.structured_output import ToolStrategy
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    model="carstenuhlig/omnicoder-9b:latest",
+    # model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+class ContactInfo(BaseModel):
+    """联系人信息"""
+    name: str = Field(description="姓名")
+    email: str = Field(description="邮箱")
+
+class EnventDetails(BaseModel):
+    """活动详情"""
+    event_name: str = Field(description="活动名称")
+    date: str = Field(description="活动日期")
+
+agent = create_agent(
+    model=model,
+    response_format=ToolStrategy(
+        Union[ContactInfo, EnventDetails,], ## 注意Union里面的东西只能取一个
+        tool_message_content="提取完成！",
+        handle_errors=False #不捕获异常，程序就会崩溃
+    )
+)
+
+
+result = agent.invoke({
+    "messages":[{
+        "role":"user",
+        "content":"请提取以下文本中的内容：张三，电子邮箱：zhang3@atguigu.com,活动名称：公司年会，活动日期：2026-7-15"
+    }]
+})
+
+rprint(result)
+```
+
+#### agent输出
+
+![image-20261007182141722](./ch7-agent学习.assets/image-20261007182141722.png)
+
+#### 举例3.handle_error=一个字符串
+
+```
+from typing import Union
+
+from langchain.agents.structured_output import ToolStrategy
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    model="carstenuhlig/omnicoder-9b:latest",
+    # model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+class ContactInfo(BaseModel):
+    """联系人信息"""
+    name: str = Field(description="姓名")
+    email: str = Field(description="邮箱")
+
+class EnventDetails(BaseModel):
+    """活动详情"""
+    event_name: str = Field(description="活动名称")
+    date: str = Field(description="活动日期")
+
+agent = create_agent(
+    model=model,
+    response_format=ToolStrategy(
+        Union[ContactInfo, EnventDetails,], ## 注意Union里面的东西只能取一个
+        tool_message_content="提取完成！",
+        handle_errors="请检查输入数据"
+    )
+)
+
+
+result = agent.invoke({
+    "messages":[{
+        "role":"user",
+        "content":"请提取以下文本中的内容：张三，电子邮箱：zhang3@atguigu.com,活动名称：公司年会，活动日期：2026-7-15"
+    }]
+})
+
+rprint(result)
+```
+
+#### agent输出，这个和老师的不太一样，它调用第二个类型
+
+![image-20261007182808703](./ch7-agent学习.assets/image-20261007182808703.png)
+
+
+
+### 情况2：设置为指定异常类型
+
+![image-20261007182614718](./ch7-agent学习.assets/image-20261007182614718.png)
+
+#### 举例代码
+
+```
+from typing import Union
+
+from langchain.agents.structured_output import ToolStrategy,MultipleStructuredOutputsError,StructuredOutputValidationError
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    model="carstenuhlig/omnicoder-9b:latest",
+    # model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+class ContactInfo(BaseModel):
+    """联系人信息"""
+    name: str = Field(description="姓名")
+    email: str = Field(description="邮箱")
+
+class EnventDetails(BaseModel):
+    """活动详情"""
+    event_name: str = Field(description="活动名称")
+    date: str = Field(description="活动日期")
+
+agent = create_agent(
+    model=model,
+    response_format=ToolStrategy(
+        Union[ContactInfo, EnventDetails,], ## 注意Union里面的东西只能取一个
+        tool_message_content="提取完成！",
+        handle_errors=(MultipleStructuredOutputsError,StructuredOutputValidationError)
+    )
+)
+
+
+result = agent.invoke({
+    "messages":[{
+        "role":"user",
+        "content":"请提取以下文本中的内容：张三，电子邮箱：zhang3@atguigu.com,活动名称：公司年会，活动日期：2026-7-15"
+    }]
+})
+
+rprint(result)
+```
+
+#### agent输出
+
+![image-20261007185055224](./ch7-agent学习.assets/image-20261007185055224.png)
+
+### 情况3：设置为自定义错误处理函数
+
+![image-20261007183716837](./ch7-agent学习.assets/image-20261007183716837.png)
+
+#### 情况3举例代码
+
+```
+from typing import Union
+
+from langchain.agents.structured_output import ToolStrategy,MultipleStructuredOutputsError,StructuredOutputValidationError
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    model="carstenuhlig/omnicoder-9b:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+class ContactInfo(BaseModel):
+    """联系人信息"""
+    name: str = Field(description="姓名")
+    email: str = Field(description="邮箱")
+
+class EnventDetails(BaseModel):
+    """活动详情"""
+    event_name: str = Field(description="活动名称")
+    date: str = Field(description="活动日期")
+
+## 定义错误处理函数
+def my_error_handler(error: Exception):
+    """自定义错误处理函数"""
+    err_str = str(error)
+    print(f"捕获到错误类型{type(error).__name__}")
+    print(f"错误详情{err_str}")
+    if isinstance(error, StructuredOutputValidationError):
+        return "评价数据格式有误，请检查字段是否符合要求。请重新分析评价内容"
+    elif isinstance(error, MultipleStructuredOutputsError):
+        return "检测到多个响应，请选择最相关的一个进行返回"
+    else:
+        return f"Error: {err_str}"
+
+agent = create_agent(
+    model=model,
+    response_format=ToolStrategy(
+        Union[ContactInfo, EnventDetails,], ## 注意Union里面的东西只能取一个
+        tool_message_content="提取完成！",
+        handle_errors=my_error_handler
+    )
+)
+
+
+result = agent.invoke({
+    "messages":[{
+        "role":"user",
+        "content":"请提取以下文本中的内容：张三，电子邮箱：zhang3@atguigu.com,活动名称：公司年会，活动日期：2026-7-15"
+    }]
+})
+
+rprint(result)
+```
+
+#### agent输出
+
+
 
 # 8.Agent的高级用法4：流式输出及模型
 
 ## 8.1流式输出的说明
+
+![image-20261007185458132](./ch7-agent学习.assets/image-20261007185458132.png)
 
 ## 8.2具体的输出模式
 
@@ -1809,7 +2091,7 @@ rprint(result)
 
 ## 8.3 流式输出模式总结
 
-# 9.实战：的功能智能体助手
+# 9.实战：多功能智能体助手
 
 ## 9.1 模型的初始化
 
