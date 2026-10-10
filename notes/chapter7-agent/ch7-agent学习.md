@@ -2015,10 +2015,40 @@ from langchain.agents import create_agent
 from rich import print as rprint
 # 1.初始化模型
 model = ChatOpenAI(
-    model="carstenuhlig/omnicoder-9b:latest",
+    # model="carstenuhlig/omnicoder-9b:latest",
+    model="483025889/qwen3.5:9b",
+    # model="mistral-nemo:latest",
+    # model="qwen3-vl:latest",
     api_key="sk12345",
     base_url="http://localhost:11434/v1",
 )
+
+## 定义错误处理函数，太复杂，会引起agent死循环
+# def custom_error_handler(error: Exception) ->str:
+#     """自定义错误处理器"""
+#     err_str = str(error)
+#     print(f"捕获到错误类型{type(error).__name__}")
+#     print(f"错误详情{err_str}")
+#     if isinstance(error, MultipleStructuredOutputsError):
+#         return "检测到多个响应，请选择最相关的一个进行返回"
+#     # elif isinstance(error, StructuredOutputValidationError):
+#     #     return "评价数据格式有误，请检查字段是否符合要求."
+# 
+#     else:
+#         return f"Error: {err_str}"
+
+## 定义错误处理函数，太复杂，会引起agent死循环
+# def custom_error_handler2(error: Exception) ->str:
+#     """自定义错误处理器"""
+#     if isinstance(error, MultipleStructuredOutputsError):
+#         return "检测到多个响应，请选择最相关的一个进行返回"
+#     else:
+#         return f"Error: {str(error)}"
+    
+def custom_error_handler3(error: Exception) ->str:
+    """自定义错误处理器"""
+    return f"Error: {str(error)}"    
+
 
 class ContactInfo(BaseModel):
     """联系人信息"""
@@ -2030,25 +2060,12 @@ class EnventDetails(BaseModel):
     event_name: str = Field(description="活动名称")
     date: str = Field(description="活动日期")
 
-## 定义错误处理函数
-def my_error_handler(error: Exception):
-    """自定义错误处理函数"""
-    err_str = str(error)
-    print(f"捕获到错误类型{type(error).__name__}")
-    print(f"错误详情{err_str}")
-    if isinstance(error, StructuredOutputValidationError):
-        return "评价数据格式有误，请检查字段是否符合要求。请重新分析评价内容"
-    elif isinstance(error, MultipleStructuredOutputsError):
-        return "检测到多个响应，请选择最相关的一个进行返回"
-    else:
-        return f"Error: {err_str}"
-
 agent = create_agent(
     model=model,
     response_format=ToolStrategy(
-        Union[ContactInfo, EnventDetails,], ## 注意Union里面的东西只能取一个
+        Union[ContactInfo, EnventDetails], ## 注意Union里面的东西只能取一个
         tool_message_content="提取完成！",
-        handle_errors=my_error_handler
+        handle_errors=custom_error_handler3
     )
 )
 
@@ -2056,7 +2073,7 @@ agent = create_agent(
 result = agent.invoke({
     "messages":[{
         "role":"user",
-        "content":"请提取以下文本中的内容：张三，电子邮箱：zhang3@atguigu.com,活动名称：公司年会，活动日期：2026-7-15"
+        "content":"请提取以下文本中的内容：姓名:张三，电子邮箱：zhang3@atguigu.com,活动名称：公司年会，活动日期：2026-7-15"
     }]
 })
 
@@ -2065,7 +2082,7 @@ rprint(result)
 
 #### agent输出
 
-
+![image-20261009173616892](./ch7-agent学习.assets/image-20261009173616892.png)
 
 # 8.Agent的高级用法4：流式输出及模型
 
@@ -2075,21 +2092,290 @@ rprint(result)
 
 ## 8.2具体的输出模式
 
+### 这7种stream_mode的区别(按ctrl+点击链接可以打开被链接的文档)：[agent的7种stream_mode效果有什么区别](./扩展笔记-agent的7种stream_mode效果有什么区别.md)
+
 ### 8.2.1 values输出模式
 
-### 8.2.2 updates输出模式
+![image-20261009191505491](./ch7-agent学习.assets/image-20261009191505491.png)
 
-### 8.2.3 messages输出模式
+![image-20261009191955855](./ch7-agent学习.assets/image-20261009191955855.png)
 
-### 8.2.4 tasks输出模式
+#### 举例代码
 
-### 8.2.5 debug输出模式
+```
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
 
-### 8.2.6 checkpoints输出模式
+from langchain.agents.structured_output import ToolStrategy,MultipleStructuredOutputsError,StructuredOutputValidationError
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="carstenuhlig/omnicoder-9b:latest",
+    model="qwen3-vl:latest",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 2.定义工具
+@tool
+def query_customer_data(customer_id: str) -> Dict[str,Any]:
+       """
+       查询客户基本信息
+
+       Args:
+              customer_id:  客户ID，用来唯一标识客户
+
+       Returns:
+               包含客户基本信息的字典，如姓名、等级，加入日期等
+       """
+       # 模拟数据库查询
+       return {"name":"张三","level":"VIP","join_date":"2023-01-15"}
+
+@tool
+def check_order_history(customer_id: str) -> Dict[str,Any]:
+       """
+       查询客户订单历史
+
+       Args:
+              customer_id:  客户ID，用来唯一标识客户
+
+       Returns:
+             包含客户订单历史的字典，如总订单数，总花费等
+       """
+       return {"total_orders":15,"total_spent":25800.00}
+
+@tool
+def get_current_promotions() ->Dict[str,Any]:
+     """
+     获取当前可以促销活动
+
+     Returns:
+            包含当前可用促销活动的字典，如活动名称，邮箱日期等
+     """
+     return {
+            "promotions":["老用户优惠","会员专属折扣"],
+            "valid_until":"2027-01-31"
+    }
+
+agent = create_agent(
+    model=model,
+    tools=[query_customer_data,check_order_history, get_current_promotions]
+)
+
+for chunk in agent.stream({
+    "messages":[{
+        "role":"user",
+        "content":"查询客户ID为CUST123456的个人信息、历史订单和可用优惠"
+    }]
+},stream_mode="values"):
+    rprint(chunk)
+    print("-"*50)
+
+
+```
+
+#### agent输出参考学习源码
+
+### 8.2.2 updates输出模式，是默认值，
+
+![image-20261009191755879](./ch7-agent学习.assets/image-20261009191755879.png)
+
+![image-20261009192036450](./ch7-agent学习.assets/image-20261009192036450.png)
+
+#### 其他都一样，就是修改stream_mode="updates"
+
+![image-20261009184605139](./ch7-agent学习.assets/image-20261009184605139.png)
+
+
+
+### 8.2.3 messages输出模式,代码基本相同，只需要修改stream_mode="messages"
+
+![image-20261009192309709](./ch7-agent学习.assets/image-20261009192309709.png)
+
+### 8.2.4 tasks输出模式,代码基本相同，只需要修改stream_mode="tasks"
+
+![image-20261009192850576](./ch7-agent学习.assets/image-20261009192850576.png)
+
+### 8.2.5 debug输出模式,代码基本相同，只需要修改stream_mode="debug"
+
+![image-20261009193101859](./ch7-agent学习.assets/image-20261009193101859.png)
+
+### 8.2.6 checkpoints输出模式,
+
+![image-20261009193334317](./ch7-agent学习.assets/image-20261009193334317.png)
+
+#### 举例代码：注意，这个代码和上面的有所不同
+
+```
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import InMemorySaver
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="carstenuhlig/omnicoder-9b:latest",
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 2.定义工具
+@tool
+def query_customer_data(customer_id: str) -> Dict[str,Any]:
+       """
+       查询客户基本信息
+
+       Args:
+              customer_id:  客户ID，用来唯一标识客户
+
+       Returns:
+               包含客户基本信息的字典，如姓名、等级，加入日期等
+       """
+       # 模拟数据库查询
+       return {"name":"张三","level":"VIP","join_date":"2023-01-15"}
+
+@tool
+def check_order_history(customer_id: str) -> Dict[str,Any]:
+       """
+       查询客户订单历史
+
+       Args:
+              customer_id:  客户ID，用来唯一标识客户
+
+       Returns:
+             包含客户订单历史的字典，如总订单数，总花费等
+       """
+       return {"total_orders":15,"total_spent":25800.00}
+
+@tool
+def get_current_promotions() ->Dict[str,Any]:
+     """
+     获取当前可以促销活动
+
+     Returns:
+            包含当前可用促销活动的字典，如活动名称，邮箱日期等
+     """
+     return {
+            "promotions":["老用户优惠","会员专属折扣"],
+            "valid_until":"2027-01-31"
+    }
+
+# 创建一个checkpointer
+checkpointer = InMemorySaver()
+
+agent = create_agent(
+    model=model,
+    tools=[query_customer_data,check_order_history, get_current_promotions],
+    checkpointer=checkpointer #启用检查点
+)
+# 3.创建唯一的会话ID
+config = {"configurable":{"thread_id":"session01"}}
+
+# 4.调用Agent
+checkpoint_count = 0
+
+for chunk in agent.stream({
+    "messages":[{
+        "role":"user",
+        "content":"查询客户ID为CUST123456的个人信息、历史订单和可用优惠"
+    }]
+},stream_mode="checkpoints",config=config):
+    checkpoint_count += 1
+    print(f"检查点#{checkpoint_count}")
+    rprint(chunk)
+    print("-"*50)
+
+
+```
+
+
 
 ### 8.2.7 custom输出模式
 
+![image-20261009201020107](./ch7-agent学习.assets/image-20261009201020107.png)
+
+#### 举例，这里的代码也是有所不同
+
+```
+import time
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="carstenuhlig/omnicoder-9b:latest",
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 2.定义工具
+
+@tool
+def generate_sales_report() -> str:
+    """生成销售报告"""
+    writer = get_stream_writer()
+    writer({"type":"生成销售报告","message":"开始生成销售报告"})
+    # 模拟数据出来
+    for i in range(1,4):
+        time.sleep(0.5)
+        writer({"type":"生成销售报告","message":f"生成销售报告进度百分比：{i*25}%"})
+    writer({"type":"生成销售报告","message":"生成销售报告完成"})
+    return "销售报告:总收入150万元，同比增长12%"
+
+@tool
+def generate_inventory_report() -> str:
+    """生成库存报告"""
+    writer = get_stream_writer()
+    writer("开始库存分析")
+    time.sleep(0.5)
+    writer("检查当前库存")
+    time.sleep(0.5)
+    writer("生成库存报告。。。")
+
+    return "当前库存量为100000件，库存充足，无异常"
+
+
+agent = create_agent(
+    model=model,
+    tools=[generate_sales_report,generate_inventory_report]
+)
+
+for chunk in agent.stream({
+    "messages":[{
+        "role":"user",
+        "content":"生成销售报告和库存报告"
+    }]
+},stream_mode="custom"):
+    rprint(chunk)
+    print("-"*50)
+
+
+```
+
+#### agent输出
+
+![image-20261009203149920](./ch7-agent学习.assets/image-20261009203149920.png)
+
 ## 8.3 流式输出模式总结
+
+<img src="./ch7-agent学习.assets/image-20261009203241065.png" alt="image-20261009203241065" style="zoom:80%;" />
+
+### 更好的总结
+
+![image-20261009203352454](./ch7-agent学习.assets/image-20261009203352454.png)
+
+![image-20261009203639513](./ch7-agent学习.assets/image-20261009203639513.png)
 
 # 9.实战：多功能智能体助手
 
