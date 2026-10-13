@@ -2379,6 +2379,8 @@ for chunk in agent.stream({
 
 # 9.实战：多功能智能体助手
 
+![image-20261012193512210](./ch7-agent学习.assets/image-20261012193512210.png)
+
 ## 9.1 模型的初始化
 
 ## 9.2 工具的定义
