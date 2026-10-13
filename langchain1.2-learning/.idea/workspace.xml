@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter7-agent/newapi_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter7-agent/newapi_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter7-agent/tool_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter7-agent/tool_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,6 +17,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Jupyter Notebook" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -29,22 +33,54 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter7-agent&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.practice-multi-features-assistant.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter7-agent",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter7-agent" />
     </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="practice-multi-features-assistant" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="langchain1.2-learning" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/level2/chapter7-agent" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.practice-multi-features-assistant" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -67,10 +103,16 @@
       <workItem from="1791519418797" duration="49000" />
       <workItem from="1791588819646" duration="9471000" />
       <workItem from="1791855099535" duration="3251000" />
+      <workItem from="1791910624535" duration="3826000" />
+      <workItem from="1791920721475" duration="86000" />
+      <workItem from="1791923178211" duration="9450000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/langchain1_2_learning$practice_multi_features_assistant.coverage" NAME="practice-multi-features-assistant Coverage Results" MODIFIED="1791932791475" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level2/chapter7-agent" />
   </component>
 </project>

@@ -173,3 +173,6 @@ def query_news_from_web(query="tesla", date="2026-09-30"):
         print(f"查询失败，状态码：{response.status_code}")
         print("响应数据：", response.text)
         return {"error": "weather api 调用失败。。。"}
+
+if __name__ == "__main___":
+   print(query_news_from_web("比亚迪"))
