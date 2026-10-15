@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm1-SummarizationMiddleware.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm2-HumanInTheLoopMiddleware.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/tool_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter7-agent/newapi_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter7-agent/newapi_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter7-agent/practice-multi-features-assistant.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter7-agent/tool_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter7-agent/tool_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,8 +16,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Jupyter Notebook" />
         <option value="Python Script" />
+        <option value="Jupyter Notebook" />
       </list>
     </option>
   </component>
@@ -33,22 +33,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.practice-multi-features-assistant.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter7-agent",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.practice-multi-features-assistant.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter8-middleware&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter8-middleware" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter7-agent" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\utils" />
     </key>
   </component>
   <component name="RunManager">
@@ -106,6 +110,9 @@
       <workItem from="1791910624535" duration="3826000" />
       <workItem from="1791920721475" duration="86000" />
       <workItem from="1791923178211" duration="9450000" />
+      <workItem from="1792025780135" duration="629000" />
+      <workItem from="1792081332569" duration="3146000" />
+      <workItem from="1792084731762" duration="11759000" />
     </task>
     <servers />
   </component>
