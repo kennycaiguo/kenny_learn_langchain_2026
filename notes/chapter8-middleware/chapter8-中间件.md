@@ -654,11 +654,412 @@ for msg in resp["messages"]:
 
 ## 2.4 To-do list中间件
 
+![image-20261017193124838](./chapter8-中间件.assets/image-20261017193124838.png)
+
+![image-20261017193452549](./chapter8-中间件.assets/image-20261017193452549.png)
+
 ### 2.4.1 参数说明
+
+![image-20261017193610948](./chapter8-中间件.assets/image-20261017193610948.png)
 
 ### 2.4.2 案例设计
 
-### 2.4.3 代码
+![image-20261017193720120](./chapter8-中间件.assets/image-20261017193720120.png)
+
+### 2.4.3 代码，注意看目录层次结构
+
+![image-20261017213132085](./chapter8-中间件.assets/image-20261017213132085.png)
+
+### 1.先在工作区根目录下面创建一个todo_workspace文件夹，在里面新建一个my_add.py,内容如下,我们故意写错把+法写成-，然后我们要让agent把它改正过来
+
+```
+def add(a:int,b:int) -> int:
+    return a-b
+```
+
+## 2.再创建一个test_my_add.py文件，内容如下
+
+```
+from my_add import add
+
+def test_add():
+    """测试加法功能"""
+    assert add(3, 2) == 5
+    assert add(1, -1) == 0
+    assert add(0, 0) == 0
+    assert add(10, -5) == 5
+```
+
+## 3.然后打开终端定位到目标文件夹的路径，，然后需要使用conda activate langchain1.2来激活虚拟环境
+
+![image-20261017200504023](./chapter8-中间件.assets/image-20261017200504023.png)
+
+### 4.然后输入pytest -q 进行测试，当然，测试是不通过的
+
+![image-20261017200725536](./chapter8-中间件.assets/image-20261017200725536.png)
+
+### 5.然后我们来编写agent的代码：ch8-dm4-TodoListMiddleware.ipynb
+
+```
+# 文件操作工具
+from pathlib import Path
+from langchain_core.tools import tool
+import subprocess
+import pytest
+
+WORKSPACE= Path("../todo_workspace")
+
+@tool
+def list_files(path: str=".") -> str:
+    """
+    列出工作区指定目录下的文件和子目录.path 只能是相对路径。
+    Args:
+        path: 工作区的相对路径，一定执行目录，默认为. ,表示工作区根路径，不能访问工作区以外的目录
+
+    """
+    target = (WORKSPACE / path).resolve()
+    workspaces_root = WORKSPACE.resolve()
+
+    if not str(target).startswith(str(workspaces_root)):
+        return "错误，只允许访问工作区内的目录。"
+    if not target.exists():
+        return f"错误，目录不存在：{path}"
+
+    if not target.is_dir():
+        return "错误，不是目录：{path}"
+
+    items = sorted(target.iterdir(),key=lambda p:(p.is_file(),p.name.lower()))
+
+    if not items:
+        return f"目录为空：{path}"
+    lines = []
+    for item in items:
+        rel = item.relative_to(workspaces_root)
+        kind = "[DIR]" if item.is_dir() else "[FILE]"
+        lines.append(f"{kind} {rel.as_posix()}")
+
+    return "\n".join(lines)
+
+
+
+@tool
+def read_file(path):
+    """
+    读取工作区中的文本文件的内容。path只能是相对路径
+
+    Args:
+        path:  工作区内的文件名
+
+    Returns:
+
+    """
+    file_path = (WORKSPACE / path).resolve()
+    if not str(file_path).startswith(str(WORKSPACE.resolve())):
+        return "错误：只允许读取工作区内的文件。"
+    if not file_path.exists():
+        return f"错误： 文件不存在{path}"
+    return file_path.read_text(encoding="utf-8")
+
+@tool
+def write_file(path, content) -> str:
+    """
+    写入工作区中的文本文件。path只能是相对路径
+
+    Args:
+        path:  工作区内的文件名
+        content: 写入文件的内容
+    """
+    file_path = (WORKSPACE / path).resolve()
+    if not str(file_path).startswith(str(WORKSPACE.resolve())):
+        return  "错误，只允许写入工作区内的文件"
+    file_path.write_text(content, encoding="utf-8")
+
+    return f"已写入文件：{path}"
+
+@tool
+def run_test() -> str:
+    """
+
+    在工作区运行 pytest -q,并返回输出。
+    不接受然后参数，返回格式为：
+    returncode=0|1
+    STDOUT:
+    STDERR:
+    """
+    try:
+        result = subprocess.run(
+       ["pytest","-q"],
+            cwd=str(WORKSPACE),
+            capture_output=True,
+            text=True,
+            timeout=20,
+            )
+        return (
+           f"returncode={result.returncode}\n\n"
+           f"STDOUT:\n{result.stdout}\n\n"
+           f"STDERR:\n{result.stderr}"
+
+       )
+    except Exception as e:
+       return f"运行测试失败：{e}"
+
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2.创建agent对象
+agent = create_agent(
+    model=model,
+    tools=[list_files,read_file,write_file,run_test],
+    middleware=[
+        TodoListMiddleware(),
+    ],
+    system_prompt=(
+        "你是一个代码修复助手。遇到多步骤任务是，先使用write_todos 制定待办事项: "
+        "然后读取文件，修复代码并运行测试。工作全部在工作区下进行。"
+    )
+
+)
+
+# 3.调用agent
+print("正在执行 Agent 任务。。。")
+
+res = agent.invoke({"messages":[
+    HumanMessage(content="请测试并修复工作区下 my_add.py 文件中的代码")
+]})
+
+for msg in res["messages"]:
+    msg.pretty_print()
+
+```
+
+
+
+### agent输出
+
+```
+正在执行 Agent 任务。。。
+================================ Human Message =================================
+
+请测试并修复工作区下 my_add.py 文件中的代码
+================================== Ai Message ==================================
+Tool Calls:
+  list_files (call_v3t46xj9)
+ Call ID: call_v3t46xj9
+  Args:
+    path: .
+================================= Tool Message =================================
+Name: list_files
+
+错误，目录不存在：.
+================================== Ai Message ==================================
+Tool Calls:
+  list_files (call_ucls55jn)
+ Call ID: call_ucls55jn
+  Args:
+    path: .
+================================= Tool Message =================================
+Name: list_files
+
+错误，目录不存在：.
+================================== Ai Message ==================================
+Tool Calls:
+  list_files (call_m7yd2r04)
+ Call ID: call_m7yd2r04
+  Args:
+    path: .
+================================= Tool Message =================================
+Name: list_files
+
+错误，目录不存在：.
+================================== Ai Message ==================================
+Tool Calls:
+  list_files (call_5t6vtiiq)
+ Call ID: call_5t6vtiiq
+  Args:
+    path: .
+================================= Tool Message =================================
+Name: list_files
+
+错误，目录不存在：.
+================================== Ai Message ==================================
+Tool Calls:
+  list_files (call_3ejtpb1b)
+ Call ID: call_3ejtpb1b
+  Args:
+    path: .
+================================= Tool Message =================================
+Name: list_files
+
+错误，目录不存在：.
+================================== Ai Message ==================================
+Tool Calls:
+  list_files (call_svk0zhp0)
+ Call ID: call_svk0zhp0
+  Args:
+    path: .
+================================= Tool Message =================================
+Name: list_files
+
+[DIR] .pytest_cache
+[DIR] __pycache__
+[FILE] my_add.py
+[FILE] test_my_add.py
+================================== Ai Message ==================================
+Tool Calls:
+  read_file (call_8wr9l7f6)
+ Call ID: call_8wr9l7f6
+  Args:
+    path: my_add.py
+================================= Tool Message =================================
+Name: read_file
+
+def add(a:int,b:int) -> int:
+    return a-b
+================================== Ai Message ==================================
+Tool Calls:
+  write_todos (call_ao3yb406)
+ Call ID: call_ao3yb406
+  Args:
+    todos: [{'content': 'Read my_add.py and test_my_add.py to understand the current implementation and requirements.', 'status': 'completed'}, {'content': 'Run tests to confirm the current issues.', 'status': 'in_progress'}, {'content': 'Fix the bug in my_add.py.', 'status': 'pending'}, {'content': 'Run tests again to ensure the fix is correct.', 'status': 'pending'}]
+================================= Tool Message =================================
+Name: write_todos
+
+Updated todo list to [{'content': 'Read my_add.py and test_my_add.py to understand the current implementation and requirements.', 'status': 'completed'}, {'content': 'Run tests to confirm the current issues.', 'status': 'in_progress'}, {'content': 'Fix the bug in my_add.py.', 'status': 'pending'}, {'content': 'Run tests again to ensure the fix is correct.', 'status': 'pending'}]
+================================== Ai Message ==================================
+Tool Calls:
+  read_file (call_nlhxfu5c)
+ Call ID: call_nlhxfu5c
+  Args:
+    path: test_my_add.py
+================================= Tool Message =================================
+Name: read_file
+
+from my_add import add
+
+def test_add():
+    """测试加法功能"""
+    assert add(3, 2) == 5
+    assert add(1, -1) == 0
+    assert add(0, 0) == 0
+    assert add(10, -5) == 5
+================================== Ai Message ==================================
+Tool Calls:
+  run_test (call_ibhdlma5)
+ Call ID: call_ibhdlma5
+  Args:
+================================= Tool Message =================================
+Name: run_test
+
+returncode=1
+
+STDOUT:
+F                                                                        [100%]
+================================== FAILURES ===================================
+__________________________________ test_add ___________________________________
+
+    def test_add():
+        """测试加法功能"""
+>       assert add(3, 2) == 5
+E       assert 1 == 5
+E        +  where 1 = add(3, 2)
+
+test_my_add.py:5: AssertionError
+=========================== short test summary info ===========================
+FAILED test_my_add.py::test_add - assert 1 == 5
+1 failed in 1.09s
+
+
+STDERR:
+
+================================== Ai Message ==================================
+Tool Calls:
+  write_todos (call_lcpjftgx)
+ Call ID: call_lcpjftgx
+  Args:
+    todos: [{'content': 'Read my_add.py and test_my_add.py to understand the current implementation and requirements.', 'status': 'completed'}, {'content': 'Run tests to confirm the current issues.', 'status': 'completed'}, {'content': 'Fix the bug in my_add.py.', 'status': 'in_progress'}, {'content': 'Run tests again to ensure the fix is correct.', 'status': 'pending'}]
+================================= Tool Message =================================
+Name: write_todos
+
+Updated todo list to [{'content': 'Read my_add.py and test_my_add.py to understand the current implementation and requirements.', 'status': 'completed'}, {'content': 'Run tests to confirm the current issues.', 'status': 'completed'}, {'content': 'Fix the bug in my_add.py.', 'status': 'in_progress'}, {'content': 'Run tests again to ensure the fix is correct.', 'status': 'pending'}]
+================================== Ai Message ==================================
+Tool Calls:
+  write_file (call_g3ikow7t)
+ Call ID: call_g3ikow7t
+  Args:
+    content: def add(a:int,b:int) -> int:
+    return a+b
+    path: my_add.py
+================================= Tool Message =================================
+Name: write_file
+
+已写入文件：my_add.py
+================================== Ai Message ==================================
+Tool Calls:
+  run_test (call_fvyv3ttv)
+ Call ID: call_fvyv3ttv
+  Args:
+================================= Tool Message =================================
+Name: run_test
+
+returncode=0
+
+STDOUT:
+.                                                                        [100%]
+1 passed in 0.12s
+
+
+STDERR:
+
+================================== Ai Message ==================================
+Tool Calls:
+  write_todos (call_7x5z0555)
+ Call ID: call_7x5z0555
+  Args:
+    todos: [{'content': 'Read my_add.py and test_my_add.py to understand the current implementation and requirements.', 'status': 'completed'}, {'content': 'Run tests to confirm the current issues.', 'status': 'completed'}, {'content': 'Fix the bug in my_add.py.', 'status': 'completed'}, {'content': 'Run tests again to ensure the fix is correct.', 'status': 'completed'}]
+================================= Tool Message =================================
+Name: write_todos
+
+Updated todo list to [{'content': 'Read my_add.py and test_my_add.py to understand the current implementation and requirements.', 'status': 'completed'}, {'content': 'Run tests to confirm the current issues.', 'status': 'completed'}, {'content': 'Fix the bug in my_add.py.', 'status': 'completed'}, {'content': 'Run tests again to ensure the fix is correct.', 'status': 'completed'}]
+================================== Ai Message ==================================
+
+已经成功修复了 `my_add.py` 文件中的代码。
+
+### 修改摘要：
+- **问题描述**：`my_add.py` 中的 `add` 函数错误地执行了减法运算（`a - b`），导致 `add(3, 2)` 返回 `1` 而不是预期中的 `5`。
+- **修复方案**：将 `return a - b` 修改为 `return a + b`。
+
+### 测试结果：
+修复后运行测试，所有用例均已通过：
+- `add(3, 2) == 5` - 通过
+- `add(1, -1) == 0` - 通过
+- `add(0, 0) == 0` - 通过
+- `add(10, -5) == 5` - 通过
+
+```
+
+### 查看my_add.py,发现错误被改正了。
+
+![image-20261017214426933](./chapter8-中间件.assets/image-20261017214426933.png)
+
+
 
 # 3.其他内置中间件
 
