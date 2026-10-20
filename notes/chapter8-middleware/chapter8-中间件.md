@@ -677,7 +677,7 @@ def add(a:int,b:int) -> int:
     return a-b
 ```
 
-## 2.再创建一个test_my_add.py文件，内容如下
+### 2.再创建一个test_my_add.py文件，内容如下
 
 ```
 from my_add import add
@@ -690,7 +690,7 @@ def test_add():
     assert add(10, -5) == 5
 ```
 
-## 3.然后打开终端定位到目标文件夹的路径，，然后需要使用conda activate langchain1.2来激活虚拟环境
+### 3.然后打开终端定位到目标文件夹的路径，，然后需要使用conda activate langchain1.2来激活虚拟环境
 
 ![image-20261017200504023](./chapter8-中间件.assets/image-20261017200504023.png)
 
@@ -1065,17 +1065,313 @@ Updated todo list to [{'content': 'Read my_add.py and test_my_add.py to understa
 
 ## 3.1 ModelCallLimitMiddleware中间件
 
-
+![image-20261019173502251](./chapter8-中间件.assets/image-20261019173502251.png)
 
 ### 举例1：整个会话限制-优雅退出
 
+```
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from langchain.agents.middleware import ModelCallLimitMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
 
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+# 2,创建agent
+agent = create_agent(
+    model=model,
+    checkpointer=InMemorySaver(),
+    middleware=[
+        ModelCallLimitMiddleware(
+            thread_limit=2, # 每个线程最多2次模型调用
+            # run_limit=5, # 每次运行最多5次
+            exit_behavior='end' # 达到限制后退出
+        ),
+    ]
+)
+
+config = {"configurable":{"thread_id":"1"}} # 作用保证下面的代码都在同一个会话中
+
+print("=" * 30, "> first <", "=" * 30)
+
+first_resp = agent.invoke({"messages":[HumanMessage("你好")]},config=config)
+for msg in first_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> second <", "=" * 30)
+second_resp = agent.invoke({"messages":[HumanMessage("你是谁？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> third <", "=" * 30)
+third_resp = agent.invoke({"messages":[HumanMessage("你是能帮我做什么？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+```
+
+
+
+#### agent输出
+
+```
+============================== > first < ==============================
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+
+你好！请问有什么我可以帮你的吗？
+============================== > second < ==============================
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+
+你好！请问有什么我可以帮你的吗？
+================================[1m Human Message [0m=================================
+
+你是谁？
+==================================[1m Ai Message [0m==================================
+
+我是 Gemma 4，是由 Google DeepMind 开发的大型语言模型。我是一个开放权重的模型，可以协助你处理文本、理解图像，并回答各种问题。请问有什么我可以帮你的吗？
+============================== > third < ==============================
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+
+你好！请问有什么我可以帮你的吗？
+================================[1m Human Message [0m=================================
+
+你是谁？
+==================================[1m Ai Message [0m==================================
+
+我是 Gemma 4，是由 Google DeepMind 开发的大型语言模型。我是一个开放权重的模型，可以协助你处理文本、理解图像，并回答各种问题。请问有什么我可以帮你的吗？
+
+```
+
+#### 可以看到第三次超出了模型调用限制2次，所以没有调用
 
 ### 举例2：整个会话限制-抛异常
+
+```
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from langchain.agents.middleware import ModelCallLimitMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
+
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+# 2,创建agent
+agent = create_agent(
+    model=model,
+    checkpointer=InMemorySaver(),
+    middleware=[
+        ModelCallLimitMiddleware(
+            thread_limit=2, # 每个线程最多2次模型调用
+            # run_limit=5, # 每次运行最多5次
+            exit_behavior='error' # 抛异常
+        ),
+    ]
+)
+
+config = {"configurable":{"thread_id":"1"}} # 作用保证下面的代码都在同一个会话中
+
+print("=" * 30, "> first <", "=" * 30)
+
+first_resp = agent.invoke({"messages":[HumanMessage("你好")]},config=config)
+for msg in first_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> second <", "=" * 30)
+second_resp = agent.invoke({"messages":[HumanMessage("你是谁？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> third <", "=" * 30)
+third_resp = agent.invoke({"messages":[HumanMessage("你是能帮我做什么？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+============================== > first < ==============================
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+
+你好！请问有什么我可以帮您的吗？
+============================== > second < ==============================
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+
+你好！请问有什么我可以帮您的吗？
+================================[1m Human Message [0m=================================
+
+你是谁？
+==================================[1m Ai Message [0m==================================
+
+我是一个由 Google 开发的大型语言模型。
+
+你可以把我当做一个全能的助手，我可以帮你：
+1. **回答问题**：无论是常识、科学知识还是复杂的专业问题。
+2. **创作内容**：比如写文章、诗歌、脚本、邮件等。
+3. **翻译语言**：支持多种语言的互译。
+4. **编写和调试代码**：支持多种编程语言。
+5. **提供建议**：比如旅游计划、学习建议或日常生活中的解决办法。
+6. **聊天交流**：陪你讨论任何你感兴趣的话题。
+
+有什么我可以帮你的吗？
+============================== > third < ==============================
+
+[31m---------------------------------------------------------------------------[39m
+[31mModelCallLimitExceededError[39m               Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[3][39m[32m, line 47[39m
+[32m     43[39m second_resp = agent.invoke({[33m"messages"[39m:[HumanMessage([33m"你是谁？"[39m)]},config=config)
+[32m     44[39m [38;5;28;01mfor[39;00m msg [38;5;28;01min[39;00m second_resp[[33m"messages"[39m]:
+[32m     45[39m     msg.pretty_print()
+[32m     46[39m print([33m"="[39m * [32m30[39m, [33m"> third <"[39m, [33m"="[39m * [32m30[39m)
+[32m---> [39m[32m47[39m third_resp = agent.invoke({[33m"messages"[39m:[HumanMessage([33m"你是能帮我做什么？"[39m)]},config=config)
+[32m     48[39m [38;5;28;01mfor[39;00m msg [38;5;28;01min[39;00m second_resp[[33m"messages"[39m]:
+[32m     49[39m     msg.pretty_print()
+
+[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\main.py:3365[39m, in [36mPregel.invoke[39m[34m(self, input, config, context, stream_mode, print_mode, output_keys, interrupt_before, interrupt_after, durability, version, **kwargs)[39m
+[32m   3362[39m             chunks.append(chunk)
+[32m   3363[39m [38;5;28;01melse[39;00m:
+[32m   3364[39m     [38;5;66;03m# v1: collect interrupts from updates stream[39;00m
+[32m-> [39m[32m3365[39m [30;43m    [39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43mchunk[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43mstream[39;49m[30;43m([39;49m
+[32m   3366[39m [30;43m        [39;49m[30;43minput[39;49m[30;43m,[39;49m
+[32m   3367[39m [30;43m        [39;49m[30;43mconfig[39;49m[30;43m,[39;49m
+[32m   3368[39m [30;43m        [39;49m[30;43mcontext[39;49m[30;43m=[39;49m[30;43mcontext[39;49m[30;43m,[39;49m
+[32m   3369[39m [30;43m        [39;49m[30;43mstream_mode[39;49m[30;43m=[39;49m[30;43m([39;49m
+[32m   3370[39m [30;43m            [39;49m[30;43m[[39;49m[30;43m"[39;49m[30;43mupdates[39;49m[30;43m"[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m"[39;49m[30;43mvalues[39;49m[30;43m"[39;49m[30;43m][39;49m[30;43m [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43mstream_mode[39;49m[30;43m [39;49m[30;43m==[39;49m[30;43m [39;49m[30;43m"[39;49m[30;43mvalues[39;49m[30;43m"[39;49m[30;43m [39;49m[30;43;01melse[39;49;00m[30;43m [39;49m[30;43mstream_mode[39;49m
+[32m   3371[39m [30;43m        [39;49m[30;43m)[39;49m[30;43m,[39;49m
+[32m   3372[39m [30;43m        [39;49m[30;43mprint_mode[39;49m[30;43m=[39;49m[30;43mprint_mode[39;49m[30;43m,[39;49m
+[32m   3373[39m [30;43m        [39;49m[30;43moutput_keys[39;49m[30;43m=[39;49m[30;43moutput_keys[39;49m[30;43m,[39;49m
+[32m   3374[39m [30;43m        [39;49m[30;43minterrupt_before[39;49m[30;43m=[39;49m[30;43minterrupt_before[39;49m[30;43m,[39;49m
+[32m   3375[39m [30;43m        [39;49m[30;43minterrupt_after[39;49m[30;43m=[39;49m[30;43minterrupt_after[39;49m[30;43m,[39;49m
+[32m   3376[39m [30;43m        [39;49m[30;43mdurability[39;49m[30;43m=[39;49m[30;43mdurability[39;49m[30;43m,[39;49m
+[32m   3377[39m [30;43m        [39;49m[30;43m*[39;49m[30;43m*[39;49m[30;43mkwargs[39;49m[30;43m,[39;49m
+[32m   3378[39m [30;43m    [39;49m[30;43m)[39;49m[30;43m:[39;49m
+[32m   3379[39m [30;43m        [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43mstream_mode[39;49m[30;43m [39;49m[30;43m==[39;49m[30;43m [39;49m[30;43m"[39;49m[30;43mvalues[39;49m[30;43m"[39;49m[30;43m:[39;49m
+[32m   3380[39m [30;43m            [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43mlen[39;49m[30;43m([39;49m[30;43mchunk[39;49m[30;43m)[39;49m[30;43m [39;49m[30;43m==[39;49m[30;43m [39;49m[30;43m2[39;49m[30;43m:[39;49m
+
+[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\main.py:2759[39m, in [36mPregel.stream[39m[34m(self, input, config, context, stream_mode, print_mode, output_keys, interrupt_before, interrupt_after, durability, subgraphs, debug, version, **kwargs)[39m
+[32m   2757[39m [38;5;28;01mfor[39;00m task [38;5;129;01min[39;00m loop.match_cached_writes():
+[32m   2758[39m     loop.output_writes(task.id, task.writes, cached=[38;5;28;01mTrue[39;00m)
+[32m-> [39m[32m2759[39m [30;43m[39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43m_[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mrunner[39;49m[30;43m.[39;49m[30;43mtick[39;49m[30;43m([39;49m
+[32m   2760[39m [30;43m    [39;49m[30;43m[[39;49m[30;43mt[39;49m[30;43m [39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43mt[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mloop[39;49m[30;43m.[39;49m[30;43mtasks[39;49m[30;43m.[39;49m[30;43mvalues[39;49m[30;43m([39;49m[30;43m)[39;49m[30;43m [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43;01mnot[39;49;00m[30;43m [39;49m[30;43mt[39;49m[30;43m.[39;49m[30;43mwrites[39;49m[30;43m][39;49m[30;43m,[39;49m
+[32m   2761[39m [30;43m    [39;49m[30;43mtimeout[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43mstep_timeout[39;49m[30;43m,[39;49m
+[32m   2762[39m [30;43m    [39;49m[30;43mget_waiter[39;49m[30;43m=[39;49m[30;43mget_waiter[39;49m[30;43m,[39;49m
+[32m   2763[39m [30;43m    [39;49m[30;43mschedule_task[39;49m[30;43m=[39;49m[30;43mloop[39;49m[30;43m.[39;49m[30;43maccept_push[39;49m[30;43m,[39;49m
+[32m   2764[39m [30;43m[39;49m[30;43m)[39;49m[30;43m:[39;49m
+[32m   2765[39m [30;43m    [39;49m[30;43;03m# emit output[39;49;00m
+[32m   2766[39m [30;43m    [39;49m[30;43;01myield from[39;49;00m[30;43m [39;49m[30;43m_output[39;49m[30;43m([39;49m
+[32m   2767[39m [30;43m        [39;49m[30;43mstream_mode[39;49m[30;43m,[39;49m
+[32m   2768[39m [30;43m        [39;49m[30;43mprint_mode[39;49m[30;43m,[39;49m
+[32m   (...)[39m[32m   2774[39m [30;43m        [39;49m[30;43m_state_mapper[39;49m[30;43m,[39;49m
+[32m   2775[39m [30;43m    [39;49m[30;43m)[39;49m
+[32m   2776[39m loop.after_tick()
+
+[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\_runner.py:167[39m, in [36mPregelRunner.tick[39m[34m(self, tasks, reraise, timeout, retry_policy, get_waiter, schedule_task)[39m
+[32m    165[39m t = tasks[[32m0[39m]
+[32m    166[39m [38;5;28;01mtry[39;00m:
+[32m--> [39m[32m167[39m     [30;43mrun_with_retry[39;49m[30;43m([39;49m
+[32m    168[39m [30;43m        [39;49m[30;43mt[39;49m[30;43m,[39;49m
+[32m    169[39m [30;43m        [39;49m[30;43mretry_policy[39;49m[30;43m,[39;49m
+[32m    170[39m [30;43m        [39;49m[30;43mconfigurable[39;49m[30;43m=[39;49m[30;43m{[39;49m
+[32m    171[39m [30;43m            [39;49m[30;43mCONFIG_KEY_CALL[39;49m[30;43m:[39;49m[30;43m [39;49m[30;43mpartial[39;49m[30;43m([39;49m
+[32m    172[39m [30;43m                [39;49m[30;43m_call[39;49m[30;43m,[39;49m
+[32m    173[39m [30;43m                [39;49m[30;43mweakref[39;49m[30;43m.[39;49m[30;43mref[39;49m[30;43m([39;49m[30;43mt[39;49m[30;43m)[39;49m[30;43m,[39;49m
+[32m    174[39m [30;43m                [39;49m[30;43mretry_policy[39;49m[30;43m=[39;49m[30;43mretry_policy[39;49m[30;43m,[39;49m
+[32m    175[39m [30;43m                [39;49m[30;43mfutures[39;49m[30;43m=[39;49m[30;43mweakref[39;49m[30;43m.[39;49m[30;43mref[39;49m[30;43m([39;49m[30;43mfutures[39;49m[30;43m)[39;49m[30;43m,[39;49m
+[32m    176[39m [30;43m                [39;49m[30;43mschedule_task[39;49m[30;43m=[39;49m[30;43mschedule_task[39;49m[30;43m,[39;49m
+[32m    177[39m [30;43m                [39;49m[30;43msubmit[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43msubmit[39;49m[30;43m,[39;49m
+[32m    178[39m [30;43m            [39;49m[30;43m)[39;49m[30;43m,[39;49m
+[32m    179[39m [30;43m        [39;49m[30;43m}[39;49m[30;43m,[39;49m
+[32m    180[39m [30;43m    [39;49m[30;43m)[39;49m
+[32m    181[39m     [38;5;28mself[39m.commit(t, [38;5;28;01mNone[39;00m)
+[32m    182[39m [38;5;28;01mexcept[39;00m [38;5;167;01mException[39;00m [38;5;28;01mas[39;00m exc:
+
+[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\_retry.py:126[39m, in [36mrun_with_retry[39m[34m(task, retry_policy, configurable)[39m
+[32m    124[39m     task.writes.clear()
+[32m    125[39m     [38;5;66;03m# run the task[39;00m
+[32m--> [39m[32m126[39m     [38;5;28;01mreturn[39;00m [30;43mtask[39;49m[30;43m.[39;49m[30;43mproc[39;49m[30;43m.[39;49m[30;43minvoke[39;49m[30;43m([39;49m[30;43mtask[39;49m[30;43m.[39;49m[30;43minput[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mconfig[39;49m[30;43m)[39;49m
+[32m    127[39m [38;5;28;01mexcept[39;00m ParentCommand [38;5;28;01mas[39;00m exc:
+[32m    128[39m     ns: [38;5;28mstr[39m = config[CONF][CONFIG_KEY_CHECKPOINT_NS]
+
+[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\_internal\_runnable.py:656[39m, in [36mRunnableSeq.invoke[39m[34m(self, input, config, **kwargs)[39m
+[32m    654[39m     [38;5;66;03m# run in context[39;00m
+[32m    655[39m     [38;5;28;01mwith[39;00m set_config_context(config, run) [38;5;28;01mas[39;00m context:
+[32m--> [39m[32m656[39m         [38;5;28minput[39m = [30;43mcontext[39;49m[30;43m.[39;49m[30;43mrun[39;49m[30;43m([39;49m[30;43mstep[39;49m[30;43m.[39;49m[30;43minvoke[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43minput[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mconfig[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m*[39;49m[30;43m*[39;49m[30;43mkwargs[39;49m[30;43m)[39;49m
+[32m    657[39m [38;5;28;01melse[39;00m:
+[32m    658[39m     [38;5;28minput[39m = step.invoke([38;5;28minput[39m, config)
+
+[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\_internal\_runnable.py:400[39m, in [36mRunnableCallable.invoke[39m[34m(self, input, config, **kwargs)[39m
+[32m    398[39m         run_manager.on_chain_end(ret)
+[32m    399[39m [38;5;28;01melse[39;00m:
+[32m--> [39m[32m400[39m     ret = [30;43mself[39;49m[30;43m.[39;49m[30;43mfunc[39;49m[30;43m([39;49m[30;43m*[39;49m[30;43margs[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m*[39;49m[30;43m*[39;49m[30;43mkwargs[39;49m[30;43m)[39;49m
+[32m    401[39m [38;5;28;01mif[39;00m [38;5;28mself[39m.recurse [38;5;129;01mand[39;00m [38;5;28misinstance[39m(ret, Runnable):
+[32m    402[39m     [38;5;28;01mreturn[39;00m ret.invoke([38;5;28minput[39m, config)
+
+[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langchain\agents\middleware\model_call_limit.py:195[39m, in [36mModelCallLimitMiddleware.before_model[39m[34m(self, state, runtime)[39m
+[32m    193[39m [38;5;28;01mif[39;00m thread_limit_exceeded [38;5;129;01mor[39;00m run_limit_exceeded:
+[32m    194[39m     [38;5;28;01mif[39;00m [38;5;28mself[39m.exit_behavior == [33m"[39m[33merror[39m[33m"[39m:
+[32m--> [39m[32m195[39m         [38;5;28;01mraise[39;00m ModelCallLimitExceededError(
+[32m    196[39m             thread_count=thread_count,
+[32m    197[39m             run_count=run_count,
+[32m    198[39m             thread_limit=[38;5;28mself[39m.thread_limit,
+[32m    199[39m             run_limit=[38;5;28mself[39m.run_limit,
+[32m    200[39m         )
+[32m    201[39m     [38;5;28;01mif[39;00m [38;5;28mself[39m.exit_behavior == [33m"[39m[33mend[39m[33m"[39m:
+[32m    202[39m         [38;5;66;03m# Create a message indicating the limit was exceeded[39;00m
+[32m    203[39m         limit_message = _build_limit_exceeded_message(
+[32m    204[39m             thread_count, run_count, [38;5;28mself[39m.thread_limit, [38;5;28mself[39m.run_limit
+[32m    205[39m         )
+
+[31mModelCallLimitExceededError[39m: Model call limits exceeded: thread limit (2/2)
+During task with name 'ModelCallLimitMiddleware.before_model' and id 'e16e128f-fe41-f7ff-164d-f35796ed5e6d'
+```
+
+
 
 
 
 ### 举例3：单次调用限制-优雅退出
+
+```
+```
+
+
 
 ### 举例4：单次调用限制-抛异常
 
