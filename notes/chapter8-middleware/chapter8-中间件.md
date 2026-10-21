@@ -1220,182 +1220,1528 @@ for msg in second_resp["messages"]:
 
 #### agent输出
 
+![image-20261019192516294](./chapter8-中间件.assets/image-20261019192516294.png)
+
+
+
+### 举例3：单次调用限制-优雅退出,比较复杂
+
+### 例3 步骤1需要编写一个假的deepseek服务器：fake_deepseek_server.py，代码如下
+
 ```
+"""
+@Author:shkstart
+@Desc: 
+"""
+
+import json
+import random
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+class FakeDeepSeekHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers.get("Content-Length", 0))
+        raw_body = self.rfile.read(content_length).decode("utf-8")
+
+        print("\n" + "=" * 100)
+
+        json_body = None
+        try:
+            json_body = json.loads(raw_body)
+            print("[JSON BODY]")
+            print(json.dumps(json_body, ensure_ascii=False, indent=2))
+        except Exception as e:
+            print("[JSON PARSE ERROR]")
+            print(repr(e))
+
+        response = {
+            "id": "chatcmpl-test",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": "any",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "",
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {
+                                    "name": json_body["tools"][0]["function"]["name"],
+                                    "arguments": json.dumps(
+                                        {'name': '康师傅', 'email': 'songhongkang@atguigu.cn', 'phone': '12345678912'},
+                                        ensure_ascii=False
+                                    )
+                                }
+                            }
+                        ]
+                    },
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 1,
+                "completion_tokens": 1,
+                "total_tokens": 2
+            }
+        }
+        append_val = {
+            "id": "call_2",
+            "type": "function",
+            "function": {
+                "name": json_body["tools"][1]["function"]["name"],
+                "arguments": json.dumps(
+                    {'event_name': '问数项目启动会', 'date': '2026-03-27'},
+                    ensure_ascii=False
+                )
+            }
+        }
+
+        if random.randint(1, 10) > 2:
+            response["choices"][0]["message"]["tool_calls"].append(append_val)
+        # response["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"] = json.dumps(
+        #     {'name1': '康师傅', 'email2': 'songhongkang@atguigu.cn', 'phone': '12345678912'},
+        #     ensure_ascii=False
+        # )
+
+        print("\n" + "=" * 100)
+        print("[RESPONSE]")
+        print(json.dumps(response, ensure_ascii=False, indent=2))
+
+        body = json.dumps(response, ensure_ascii=False).encode("utf-8")
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        pass
+
+
+def main():
+    server = HTTPServer(("127.0.0.1", 8889), FakeDeepSeekHandler)
+    print("Fake DeepSeek server running at http://127.0.0.1:8889")
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### 例3 步骤2，客户端代码
+
+```
+from pydantic import BaseModel, Field
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from langchain.agents.middleware import ModelCallLimitMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
+
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    model="any", # 这个模型必须和fake_deepseek_server返回的模型名称一致
+    api_key="sk12345",
+    base_url="http://127.0.0.1:8889", # 必须是fake_deepseek_server提供的url
+)
+# 2,创建agent
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱地址")
+    phone: str = Field(description="用户的手机号")
+
+
+class EventInfo(BaseModel):
+    event_name: str = Field(description="事件名称")
+    date: str = Field(description="事件发生日期")
+
+agent = create_agent(
+    model=model,
+    checkpointer=InMemorySaver(),
+    middleware=[
+        ModelCallLimitMiddleware(
+            # thread_limit=2, # 每个线程最多2次模型调用
+            run_limit=3, # 每次运行最多3次
+            exit_behavior='end' # 抛异常
+        ),
+    ],
+    response_format=Union[ContactInfo, EventInfo]
+
+)
+
+config = {"configurable":{"thread_id":"1"}} # 作用保证下面的代码都在同一个会话中
+
+print("=" * 30, "> first <", "=" * 30)
+
+first_resp = agent.invoke({"messages":[HumanMessage("你好")]},config=config)
+for msg in first_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> second <", "=" * 30)
+second_resp = agent.invoke({"messages":[HumanMessage("你是谁？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> third <", "=" * 30)
+third_resp = agent.invoke({"messages":[HumanMessage("你是能帮我做什么？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+```
+
+##### 注意：需要先把服务器运行起来。出现2个输出格式的概率是80%
+
+#### agent的输出可能有20%的几率不一样
+
+```
+Deserializing unregistered type __main__.ContactInfo from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('__main__', 'ContactInfo')]
+
 ============================== > first < ==============================
 ================================[1m Human Message [0m=================================
 
 你好
 ==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
 
-你好！请问有什么我可以帮您的吗？
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Returning structured response: name='康师傅' email='songhongkang@atguigu.cn' phone='12345678912'
 ============================== > second < ==============================
 ================================[1m Human Message [0m=================================
 
 你好
 ==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
 
-你好！请问有什么我可以帮您的吗？
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Returning structured response: name='康师傅' email='songhongkang@atguigu.cn' phone='12345678912'
 ================================[1m Human Message [0m=================================
 
 你是谁？
 ==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
 
-我是一个由 Google 开发的大型语言模型。
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
 
-你可以把我当做一个全能的助手，我可以帮你：
-1. **回答问题**：无论是常识、科学知识还是复杂的专业问题。
-2. **创作内容**：比如写文章、诗歌、脚本、邮件等。
-3. **翻译语言**：支持多种语言的互译。
-4. **编写和调试代码**：支持多种编程语言。
-5. **提供建议**：比如旅游计划、学习建议或日常生活中的解决办法。
-6. **聊天交流**：陪你讨论任何你感兴趣的话题。
-
-有什么我可以帮你的吗？
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
 ============================== > third < ==============================
+================================[1m Human Message [0m=================================
 
-[31m---------------------------------------------------------------------------[39m
-[31mModelCallLimitExceededError[39m               Traceback (most recent call last)
-[36mCell[39m[36m [39m[32mIn[3][39m[32m, line 47[39m
-[32m     43[39m second_resp = agent.invoke({[33m"messages"[39m:[HumanMessage([33m"你是谁？"[39m)]},config=config)
-[32m     44[39m [38;5;28;01mfor[39;00m msg [38;5;28;01min[39;00m second_resp[[33m"messages"[39m]:
-[32m     45[39m     msg.pretty_print()
-[32m     46[39m print([33m"="[39m * [32m30[39m, [33m"> third <"[39m, [33m"="[39m * [32m30[39m)
-[32m---> [39m[32m47[39m third_resp = agent.invoke({[33m"messages"[39m:[HumanMessage([33m"你是能帮我做什么？"[39m)]},config=config)
-[32m     48[39m [38;5;28;01mfor[39;00m msg [38;5;28;01min[39;00m second_resp[[33m"messages"[39m]:
-[32m     49[39m     msg.pretty_print()
+你好
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
 
-[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\main.py:3365[39m, in [36mPregel.invoke[39m[34m(self, input, config, context, stream_mode, print_mode, output_keys, interrupt_before, interrupt_after, durability, version, **kwargs)[39m
-[32m   3362[39m             chunks.append(chunk)
-[32m   3363[39m [38;5;28;01melse[39;00m:
-[32m   3364[39m     [38;5;66;03m# v1: collect interrupts from updates stream[39;00m
-[32m-> [39m[32m3365[39m [30;43m    [39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43mchunk[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43mstream[39;49m[30;43m([39;49m
-[32m   3366[39m [30;43m        [39;49m[30;43minput[39;49m[30;43m,[39;49m
-[32m   3367[39m [30;43m        [39;49m[30;43mconfig[39;49m[30;43m,[39;49m
-[32m   3368[39m [30;43m        [39;49m[30;43mcontext[39;49m[30;43m=[39;49m[30;43mcontext[39;49m[30;43m,[39;49m
-[32m   3369[39m [30;43m        [39;49m[30;43mstream_mode[39;49m[30;43m=[39;49m[30;43m([39;49m
-[32m   3370[39m [30;43m            [39;49m[30;43m[[39;49m[30;43m"[39;49m[30;43mupdates[39;49m[30;43m"[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m"[39;49m[30;43mvalues[39;49m[30;43m"[39;49m[30;43m][39;49m[30;43m [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43mstream_mode[39;49m[30;43m [39;49m[30;43m==[39;49m[30;43m [39;49m[30;43m"[39;49m[30;43mvalues[39;49m[30;43m"[39;49m[30;43m [39;49m[30;43;01melse[39;49;00m[30;43m [39;49m[30;43mstream_mode[39;49m
-[32m   3371[39m [30;43m        [39;49m[30;43m)[39;49m[30;43m,[39;49m
-[32m   3372[39m [30;43m        [39;49m[30;43mprint_mode[39;49m[30;43m=[39;49m[30;43mprint_mode[39;49m[30;43m,[39;49m
-[32m   3373[39m [30;43m        [39;49m[30;43moutput_keys[39;49m[30;43m=[39;49m[30;43moutput_keys[39;49m[30;43m,[39;49m
-[32m   3374[39m [30;43m        [39;49m[30;43minterrupt_before[39;49m[30;43m=[39;49m[30;43minterrupt_before[39;49m[30;43m,[39;49m
-[32m   3375[39m [30;43m        [39;49m[30;43minterrupt_after[39;49m[30;43m=[39;49m[30;43minterrupt_after[39;49m[30;43m,[39;49m
-[32m   3376[39m [30;43m        [39;49m[30;43mdurability[39;49m[30;43m=[39;49m[30;43mdurability[39;49m[30;43m,[39;49m
-[32m   3377[39m [30;43m        [39;49m[30;43m*[39;49m[30;43m*[39;49m[30;43mkwargs[39;49m[30;43m,[39;49m
-[32m   3378[39m [30;43m    [39;49m[30;43m)[39;49m[30;43m:[39;49m
-[32m   3379[39m [30;43m        [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43mstream_mode[39;49m[30;43m [39;49m[30;43m==[39;49m[30;43m [39;49m[30;43m"[39;49m[30;43mvalues[39;49m[30;43m"[39;49m[30;43m:[39;49m
-[32m   3380[39m [30;43m            [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43mlen[39;49m[30;43m([39;49m[30;43mchunk[39;49m[30;43m)[39;49m[30;43m [39;49m[30;43m==[39;49m[30;43m [39;49m[30;43m2[39;49m[30;43m:[39;49m
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
 
-[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\main.py:2759[39m, in [36mPregel.stream[39m[34m(self, input, config, context, stream_mode, print_mode, output_keys, interrupt_before, interrupt_after, durability, subgraphs, debug, version, **kwargs)[39m
-[32m   2757[39m [38;5;28;01mfor[39;00m task [38;5;129;01min[39;00m loop.match_cached_writes():
-[32m   2758[39m     loop.output_writes(task.id, task.writes, cached=[38;5;28;01mTrue[39;00m)
-[32m-> [39m[32m2759[39m [30;43m[39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43m_[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mrunner[39;49m[30;43m.[39;49m[30;43mtick[39;49m[30;43m([39;49m
-[32m   2760[39m [30;43m    [39;49m[30;43m[[39;49m[30;43mt[39;49m[30;43m [39;49m[30;43;01mfor[39;49;00m[30;43m [39;49m[30;43mt[39;49m[30;43m [39;49m[30;43;01min[39;49;00m[30;43m [39;49m[30;43mloop[39;49m[30;43m.[39;49m[30;43mtasks[39;49m[30;43m.[39;49m[30;43mvalues[39;49m[30;43m([39;49m[30;43m)[39;49m[30;43m [39;49m[30;43;01mif[39;49;00m[30;43m [39;49m[30;43;01mnot[39;49;00m[30;43m [39;49m[30;43mt[39;49m[30;43m.[39;49m[30;43mwrites[39;49m[30;43m][39;49m[30;43m,[39;49m
-[32m   2761[39m [30;43m    [39;49m[30;43mtimeout[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43mstep_timeout[39;49m[30;43m,[39;49m
-[32m   2762[39m [30;43m    [39;49m[30;43mget_waiter[39;49m[30;43m=[39;49m[30;43mget_waiter[39;49m[30;43m,[39;49m
-[32m   2763[39m [30;43m    [39;49m[30;43mschedule_task[39;49m[30;43m=[39;49m[30;43mloop[39;49m[30;43m.[39;49m[30;43maccept_push[39;49m[30;43m,[39;49m
-[32m   2764[39m [30;43m[39;49m[30;43m)[39;49m[30;43m:[39;49m
-[32m   2765[39m [30;43m    [39;49m[30;43;03m# emit output[39;49;00m
-[32m   2766[39m [30;43m    [39;49m[30;43;01myield from[39;49;00m[30;43m [39;49m[30;43m_output[39;49m[30;43m([39;49m
-[32m   2767[39m [30;43m        [39;49m[30;43mstream_mode[39;49m[30;43m,[39;49m
-[32m   2768[39m [30;43m        [39;49m[30;43mprint_mode[39;49m[30;43m,[39;49m
-[32m   (...)[39m[32m   2774[39m [30;43m        [39;49m[30;43m_state_mapper[39;49m[30;43m,[39;49m
-[32m   2775[39m [30;43m    [39;49m[30;43m)[39;49m
-[32m   2776[39m loop.after_tick()
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
 
-[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\_runner.py:167[39m, in [36mPregelRunner.tick[39m[34m(self, tasks, reraise, timeout, retry_policy, get_waiter, schedule_task)[39m
-[32m    165[39m t = tasks[[32m0[39m]
-[32m    166[39m [38;5;28;01mtry[39;00m:
-[32m--> [39m[32m167[39m     [30;43mrun_with_retry[39;49m[30;43m([39;49m
-[32m    168[39m [30;43m        [39;49m[30;43mt[39;49m[30;43m,[39;49m
-[32m    169[39m [30;43m        [39;49m[30;43mretry_policy[39;49m[30;43m,[39;49m
-[32m    170[39m [30;43m        [39;49m[30;43mconfigurable[39;49m[30;43m=[39;49m[30;43m{[39;49m
-[32m    171[39m [30;43m            [39;49m[30;43mCONFIG_KEY_CALL[39;49m[30;43m:[39;49m[30;43m [39;49m[30;43mpartial[39;49m[30;43m([39;49m
-[32m    172[39m [30;43m                [39;49m[30;43m_call[39;49m[30;43m,[39;49m
-[32m    173[39m [30;43m                [39;49m[30;43mweakref[39;49m[30;43m.[39;49m[30;43mref[39;49m[30;43m([39;49m[30;43mt[39;49m[30;43m)[39;49m[30;43m,[39;49m
-[32m    174[39m [30;43m                [39;49m[30;43mretry_policy[39;49m[30;43m=[39;49m[30;43mretry_policy[39;49m[30;43m,[39;49m
-[32m    175[39m [30;43m                [39;49m[30;43mfutures[39;49m[30;43m=[39;49m[30;43mweakref[39;49m[30;43m.[39;49m[30;43mref[39;49m[30;43m([39;49m[30;43mfutures[39;49m[30;43m)[39;49m[30;43m,[39;49m
-[32m    176[39m [30;43m                [39;49m[30;43mschedule_task[39;49m[30;43m=[39;49m[30;43mschedule_task[39;49m[30;43m,[39;49m
-[32m    177[39m [30;43m                [39;49m[30;43msubmit[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43msubmit[39;49m[30;43m,[39;49m
-[32m    178[39m [30;43m            [39;49m[30;43m)[39;49m[30;43m,[39;49m
-[32m    179[39m [30;43m        [39;49m[30;43m}[39;49m[30;43m,[39;49m
-[32m    180[39m [30;43m    [39;49m[30;43m)[39;49m
-[32m    181[39m     [38;5;28mself[39m.commit(t, [38;5;28;01mNone[39;00m)
-[32m    182[39m [38;5;28;01mexcept[39;00m [38;5;167;01mException[39;00m [38;5;28;01mas[39;00m exc:
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
 
-[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\pregel\_retry.py:126[39m, in [36mrun_with_retry[39m[34m(task, retry_policy, configurable)[39m
-[32m    124[39m     task.writes.clear()
-[32m    125[39m     [38;5;66;03m# run the task[39;00m
-[32m--> [39m[32m126[39m     [38;5;28;01mreturn[39;00m [30;43mtask[39;49m[30;43m.[39;49m[30;43mproc[39;49m[30;43m.[39;49m[30;43minvoke[39;49m[30;43m([39;49m[30;43mtask[39;49m[30;43m.[39;49m[30;43minput[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mconfig[39;49m[30;43m)[39;49m
-[32m    127[39m [38;5;28;01mexcept[39;00m ParentCommand [38;5;28;01mas[39;00m exc:
-[32m    128[39m     ns: [38;5;28mstr[39m = config[CONF][CONFIG_KEY_CHECKPOINT_NS]
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
 
-[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\_internal\_runnable.py:656[39m, in [36mRunnableSeq.invoke[39m[34m(self, input, config, **kwargs)[39m
-[32m    654[39m     [38;5;66;03m# run in context[39;00m
-[32m    655[39m     [38;5;28;01mwith[39;00m set_config_context(config, run) [38;5;28;01mas[39;00m context:
-[32m--> [39m[32m656[39m         [38;5;28minput[39m = [30;43mcontext[39;49m[30;43m.[39;49m[30;43mrun[39;49m[30;43m([39;49m[30;43mstep[39;49m[30;43m.[39;49m[30;43minvoke[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43minput[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mconfig[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m*[39;49m[30;43m*[39;49m[30;43mkwargs[39;49m[30;43m)[39;49m
-[32m    657[39m [38;5;28;01melse[39;00m:
-[32m    658[39m     [38;5;28minput[39m = step.invoke([38;5;28minput[39m, config)
+Returning structured response: name='康师傅' email='songhongkang@atguigu.cn' phone='12345678912'
+================================[1m Human Message [0m=================================
 
-[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langgraph\_internal\_runnable.py:400[39m, in [36mRunnableCallable.invoke[39m[34m(self, input, config, **kwargs)[39m
-[32m    398[39m         run_manager.on_chain_end(ret)
-[32m    399[39m [38;5;28;01melse[39;00m:
-[32m--> [39m[32m400[39m     ret = [30;43mself[39;49m[30;43m.[39;49m[30;43mfunc[39;49m[30;43m([39;49m[30;43m*[39;49m[30;43margs[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m*[39;49m[30;43m*[39;49m[30;43mkwargs[39;49m[30;43m)[39;49m
-[32m    401[39m [38;5;28;01mif[39;00m [38;5;28mself[39m.recurse [38;5;129;01mand[39;00m [38;5;28misinstance[39m(ret, Runnable):
-[32m    402[39m     [38;5;28;01mreturn[39;00m ret.invoke([38;5;28minput[39m, config)
+你是谁？
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
 
-[36mFile [39m[32m~\anaconda3\envs\langchain1.2\Lib\site-packages\langchain\agents\middleware\model_call_limit.py:195[39m, in [36mModelCallLimitMiddleware.before_model[39m[34m(self, state, runtime)[39m
-[32m    193[39m [38;5;28;01mif[39;00m thread_limit_exceeded [38;5;129;01mor[39;00m run_limit_exceeded:
-[32m    194[39m     [38;5;28;01mif[39;00m [38;5;28mself[39m.exit_behavior == [33m"[39m[33merror[39m[33m"[39m:
-[32m--> [39m[32m195[39m         [38;5;28;01mraise[39;00m ModelCallLimitExceededError(
-[32m    196[39m             thread_count=thread_count,
-[32m    197[39m             run_count=run_count,
-[32m    198[39m             thread_limit=[38;5;28mself[39m.thread_limit,
-[32m    199[39m             run_limit=[38;5;28mself[39m.run_limit,
-[32m    200[39m         )
-[32m    201[39m     [38;5;28;01mif[39;00m [38;5;28mself[39m.exit_behavior == [33m"[39m[33mend[39m[33m"[39m:
-[32m    202[39m         [38;5;66;03m# Create a message indicating the limit was exceeded[39;00m
-[32m    203[39m         limit_message = _build_limit_exceeded_message(
-[32m    204[39m             thread_count, run_count, [38;5;28mself[39m.thread_limit, [38;5;28mself[39m.run_limit
-[32m    205[39m         )
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
 
-[31mModelCallLimitExceededError[39m: Model call limits exceeded: thread limit (2/2)
-During task with name 'ModelCallLimitMiddleware.before_model' and id 'e16e128f-fe41-f7ff-164d-f35796ed5e6d'
-```
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
 
-
-
-
-
-### 举例3：单次调用限制-优雅退出
-
-```
 ```
 
 
 
 ### 举例4：单次调用限制-抛异常
 
+#### 例子4 步骤1和上面一样，
+
+#### 例子4 步骤2.代码如下
+
+```
+from pydantic import BaseModel, Field
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from langchain.agents.middleware import ModelCallLimitMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
+
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    model="any", # 这个模型必须和fake_deepseek_server返回的模型名称一致
+    api_key="sk12345",
+    base_url="http://127.0.0.1:8889", # 必须是fake_deepseek_server提供的url
+)
+# 2,创建agent
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱地址")
+    phone: str = Field(description="用户的手机号")
+
+
+class EventInfo(BaseModel):
+    event_name: str = Field(description="事件名称")
+    date: str = Field(description="事件发生日期")
+
+agent = create_agent(
+    model=model,
+    checkpointer=InMemorySaver(),
+    middleware=[
+        ModelCallLimitMiddleware(
+            # thread_limit=2, # 每个线程最多2次模型调用
+            run_limit=3, # 每次运行最多3次
+            exit_behavior='error' # 抛异常
+        ),
+    ],
+    response_format=Union[ContactInfo, EventInfo]
+
+)
+
+config = {"configurable":{"thread_id":"1"}} # 作用保证下面的代码都在同一个会话中
+
+print("=" * 30, "> first <", "=" * 30)
+
+first_resp = agent.invoke({"messages":[HumanMessage("你好")]},config=config)
+for msg in first_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> second <", "=" * 30)
+second_resp = agent.invoke({"messages":[HumanMessage("你是谁？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+print("=" * 30, "> third <", "=" * 30)
+third_resp = agent.invoke({"messages":[HumanMessage("你是能帮我做什么？")]},config=config)
+for msg in second_resp["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+![image-20261019202746486](./chapter8-中间件.assets/image-20261019202746486.png)
+
 ## 3.2ToolCallLimitedMiddleware中间件
 
-### 举例1：整个会话限制-优雅结束
+![image-20261019202937233](./chapter8-中间件.assets/image-20261019202937233.png)
 
-### 举例2：整个会话限制-抛异常
+### 举例1：整个会话限制-优雅结束，还是需要那个fake_deep_seekserver
 
-### 举例3：单次调用限制-继续运行
+```
+from pydantic import BaseModel, Field
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware, \
+    ToolCallLimitMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from langchain.agents.middleware import ModelCallLimitMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
+
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    model="any", # 这个模型必须和fake_deepseek_server返回的模型名称一致
+    api_key="sk12345",
+    base_url="http://127.0.0.1:8889", # 必须是fake_deepseek_server提供的url
+)
+
+# 定义输出格式的结构
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱地址")
+    phone: str = Field(description="用户的手机号")
+
+
+class EventInfo(BaseModel):
+    event_name: str = Field(description="事件名称")
+    date: str = Field(description="事件发生日期")
+
+agent = create_agent(
+    model=model,
+    checkpointer=InMemorySaver(),
+    middleware=[
+        ToolCallLimitMiddleware(
+            thread_limit=2,
+            # run_limit=2,
+            exit_behavior='end'
+        ),
+    ],
+    response_format=Union[ContactInfo,EventInfo],
+)
+
+config = {"configurable":{"thread_id":"1"}}
+
+resp = agent.invoke({"messages":[
+   HumanMessage(content="你好")
+]},config=config)
+
+for msg in resp["messages"]:
+    msg.pretty_print()
+
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Tool call limit exceeded. Do not make additional tool calls.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Tool call limit exceeded. Do not make additional tool calls.
+==================================[1m Ai Message [0m==================================
+
+Tool call limit reached: thread limit exceeded (4/2 calls) and run limit exceeded (4/2 calls).
+
+```
+
+
+
+### 举例2：整个会话限制-抛异常,fake_deepseek_server必须启动而且工作正常
+
+```
+from pydantic import BaseModel, Field
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware, \
+    ToolCallLimitMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from langchain.agents.middleware import ModelCallLimitMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
+
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    model="any", # 这个模型必须和fake_deepseek_server返回的模型名称一致
+    api_key="sk12345",
+    base_url="http://127.0.0.1:8889", # 必须是fake_deepseek_server提供的url
+)
+
+# 定义输出格式的结构
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱地址")
+    phone: str = Field(description="用户的手机号")
+
+
+class EventInfo(BaseModel):
+    event_name: str = Field(description="事件名称")
+    date: str = Field(description="事件发生日期")
+
+agent = create_agent(
+    model=model,
+    checkpointer=InMemorySaver(),
+    middleware=[
+        ToolCallLimitMiddleware(
+            thread_limit=2,
+            # run_limit=2,
+            exit_behavior='error'
+        ),
+    ],
+    response_format=Union[ContactInfo,EventInfo],
+)
+
+config = {"configurable":{"thread_id":"1"}}
+
+resp = agent.invoke({"messages":[
+   HumanMessage(content="你好")
+]},config=config)
+
+for msg in resp["messages"]:
+    msg.pretty_print()
+
+```
+
+#### agent输出
+
+![image-20261020190126887](./chapter8-中间件.assets/image-20261020190126887.png)
+
+### 举例3：单次调用限制-继续运行，exit_behavior='continue'，,fake_deepseek_server必须启动而且工作正常
+
+```
+from pydantic import BaseModel, Field
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware, \
+    ToolCallLimitMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from langchain.agents.middleware import ModelCallLimitMiddleware
+from langgraph.checkpoint.memory import InMemorySaver
+
+
+# 1.初始化模型给中间件使用，不是agent
+model = ChatOpenAI(
+    model="any", # 这个模型必须和fake_deepseek_server返回的模型名称一致
+    api_key="sk12345",
+    base_url="http://127.0.0.1:8889", # 必须是fake_deepseek_server提供的url
+)
+
+# 定义输出格式的结构
+class ContactInfo(BaseModel):
+    """用户的联系方式"""
+    name: str = Field(description="用户姓名")
+    email: str = Field(description="用户邮箱地址")
+    phone: str = Field(description="用户的手机号")
+
+
+class EventInfo(BaseModel):
+    event_name: str = Field(description="事件名称")
+    date: str = Field(description="事件发生日期")
+
+agent = create_agent(
+    model=model,
+    checkpointer=InMemorySaver(),
+    middleware=[
+        ToolCallLimitMiddleware(
+            # thread_limit=2,
+            run_limit=2,
+            exit_behavior='continue'
+        ),
+    ],
+    response_format=Union[ContactInfo,EventInfo],
+)
+
+config = {"configurable":{"thread_id":"1"}}
+
+resp = agent.invoke({"messages":[
+   HumanMessage(content="你好")
+]},config=config)
+
+for msg in resp["messages"]:
+    msg.pretty_print()
+
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Tool call limit exceeded. Do not make additional tool calls.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Tool call limit exceeded. Do not make additional tool calls.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+  EventInfo (call_2)
+ Call ID: call_2
+  Args:
+    event_name: 问数项目启动会
+    date: 2026-03-27
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Error: Model incorrectly returned multiple structured responses (ContactInfo, EventInfo) when only one is expected.
+ Please fix your mistakes.
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Tool call limit exceeded. Do not make additional tool calls.
+=================================[1m Tool Message [0m=================================
+Name: EventInfo
+
+Tool call limit exceeded. Do not make additional tool calls.
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  ContactInfo (call_1)
+ Call ID: call_1
+  Args:
+    name: 康师傅
+    email: songhongkang@atguigu.cn
+    phone: 12345678912
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Returning structured response: name='康师傅' email='songhongkang@atguigu.cn' phone='12345678912'
+=================================[1m Tool Message [0m=================================
+Name: ContactInfo
+
+Tool call limit exceeded. Do not make additional tool calls.
+
+```
+
+
 
 ## 3.3ModelCallbackMiddleware中间件
 
+### 拥有故障转移，当主模型无法访问是，使用备用模型
+
+### 举例代码
+
+```
+from langchain.agents.middleware import SummarizationMiddleware, PIIMiddleware, TodoListMiddleware, \
+    ModelFallbackMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+
+
+## 2.创建agent
+agent = create_agent(
+    model="ollama:fake_qwen",
+    middleware=[
+        ModelFallbackMiddleware(
+            "ollama:483025889/qwen3.5:9b",
+            "ollama:mistral-nemo:latest"
+        )
+    ]
+)
+
+resp = agent.invoke({"messages": [HumanMessage("你是谁？")]})
+last_res = resp["messages"][-1]
+rprint(last_res)
+print('=' * 30, '-> model_name <-', '=' * 30)
+print(last_res.response_metadata.get("model_name"))
+
+```
+
+
+
+#### agent输出
+
+```
+AIMessage(
+    content='你好！我是 
+Qwen3.5，是通义实验室研发的超大规模语言模型。我具备强大的语言理解、逻辑推理、代码生成及多轮对话能力，可以帮助你完成
+文本创作、问题解答、数据分析等任务。无论你需要什么帮助，都可以随时问我哦～有什么具体问题想聊聊吗？ 😊',
+    additional_kwargs={},
+    response_metadata={
+        'model': '483025889/qwen3.5:9b',
+        'created_at': '2026-10-21T01:43:33.5540086Z',
+        'done': True,
+        'done_reason': 'stop',
+        'total_duration': 55133910100,
+        'load_duration': 7720100,
+        'prompt_eval_count': 12,
+        'prompt_eval_duration': 374868000,
+        'eval_count': 233,
+        'eval_duration': 54702719000,
+        'logprobs': None,
+        'model_name': '483025889/qwen3.5:9b',
+        'model_provider': 'ollama'
+    },
+    id='lc_run--01a15c1f-ec53-7522-97f7-d9b5a14d21fb-0',
+    tool_calls=[],
+    invalid_tool_calls=[],
+    usage_metadata={'input_tokens': 12, 'output_tokens': 233, 'total_tokens': 245}
+)
+```
+
+============================== -> model_name <- ==============================
+483025889/qwen3.5:9b
+
 ## 3.4 LLMToolSelectorMiddleware中间件
 
-### 举例1
+![image-20261020194821191](./chapter8-中间件.assets/image-20261020194821191.png)
 
-### 举例2
+### 举例1,代码如下
 
-### 举例3
+```
 
-### 举例4
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
 
-### 举例5
+# 1.初始化模型需要2个模型应该是model_out直接给agent使用，另外应该model_in,防止中间件里面
+model_out = ChatOpenAI(
+    model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+model_in = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 定义工具
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    return f"{city}今天天气晴朗"
+
+
+@tool
+def get_news():
+    """查询今日国内新闻概要"""
+    return ("今日国内新闻概要："
+            "中方三艘油轮过航霍尔木兹海峡")
+
+
+@tool
+def calculate(num1: int, num2: int) -> int:
+    """
+    执行数学计算
+
+    Args:
+        num1: 第一个加数
+        num2: 第二个加数
+    """
+    return num1 + num2
+
+@tool
+def search_stock(symbol: str):
+    """
+    查询股票行情
+
+    Args:
+        symbol: 股票代码
+    """
+    return "该股票今天行情不错"
+
+agent = create_agent(
+    model=model_out,
+    tools=[get_weather, get_news, calculate, search_stock],
+    middleware=[
+        LLMToolSelectorMiddleware(
+            model=model_in,
+            max_tools=0,
+            always_include=["get_weather"]
+        )
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("北京今天天气如何？今日新闻概要")]})
+for msg in resp["messages"]:
+    msg.pretty_print()
+```
+
+
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+北京今天天气如何？今日新闻概要
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_bsdjtvrd)
+ Call ID: call_bsdjtvrd
+  Args:
+    city: 北京
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+北京今天天气晴朗
+==================================[1m Ai Message [0m==================================
+
+北京今天天气晴朗。关于今日新闻概要，我目前无法提供实时新闻内容（当前工具仅支持天气查询功能）。需要我为您查询其他信息吗？
+
+```
+
+
+
+### 举例2,代码如下
+
+```
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+# 1.初始化模型需要2个模型应该是model_out直接给agent使用，另外应该model_in,防止中间件里面
+model_out = ChatOpenAI(
+    model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+model_in = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 定义工具
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    return f"{city}今天天气晴朗"
+
+
+@tool
+def get_news():
+    """查询今日国内新闻概要"""
+    return ("今日国内新闻概要："
+            "中方三艘油轮过航霍尔木兹海峡")
+
+
+@tool
+def calculate(num1: int, num2: int) -> int:
+    """
+    执行数学计算
+
+    Args:
+        num1: 第一个加数
+        num2: 第二个加数
+    """
+    return num1 + num2
+
+@tool
+def search_stock(symbol: str):
+    """
+    查询股票行情
+
+    Args:
+        symbol: 股票代码
+    """
+    return "该股票今天行情不错"
+
+agent = create_agent(
+    model=model_out,
+    tools=[get_weather, get_news, calculate, search_stock],
+    middleware=[
+        LLMToolSelectorMiddleware(
+            model=model_in,
+            max_tools=0,
+            always_include=["get_news"]
+        )
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("北京今天天气如何？今日新闻概要")]})
+for msg in resp["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+北京今天天气如何？今日新闻概要
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_news (call_1igymmj6)
+ Call ID: call_1igymmj6
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+今日国内新闻概要：中方三艘油轮过航霍尔木兹海峡
+==================================[1m Ai Message [0m==================================
+
+关于北京今日天气，当前工具无法提供天气查询功能。已为您获取今日国内新闻概要：
+【今日国内新闻概要】中方三艘油轮过航霍尔木兹海峡
+
+如需其他帮助，请随时告知。
+
+```
+
+
+
+### 举例3,代码如下
+
+```
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+# 1.初始化模型需要2个模型应该是model_out直接给agent使用，另外应该model_in,防止中间件里面
+model_out = ChatOpenAI(
+    model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+model_in = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 定义工具
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    return f"{city}今天天气晴朗"
+
+
+@tool
+def get_news():
+    """查询今日国内新闻概要"""
+    return ("今日国内新闻概要："
+            "中方三艘油轮过航霍尔木兹海峡")
+
+
+@tool
+def calculate(num1: int, num2: int) -> int:
+    """
+    执行数学计算
+
+    Args:
+        num1: 第一个加数
+        num2: 第二个加数
+    """
+    return num1 + num2
+
+@tool
+def search_stock(symbol: str):
+    """
+    查询股票行情
+
+    Args:
+        symbol: 股票代码
+    """
+    return "该股票今天行情不错"
+
+agent = create_agent(
+    model=model_out,
+    tools=[get_weather, get_news, calculate, search_stock],
+    middleware=[
+        LLMToolSelectorMiddleware(
+            model=model_in,
+            max_tools=0,
+            always_include=["get_news","get_weather"]
+        )
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("北京今天天气如何？今日新闻概要")]})
+for msg in resp["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+北京今天天气如何？今日新闻概要
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_bsat1cmw)
+ Call ID: call_bsat1cmw
+  Args:
+    city: 北京
+  get_news (call_fdhusdsy)
+ Call ID: call_fdhusdsy
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+北京今天天气晴朗
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+今日国内新闻概要：中方三艘油轮过航霍尔木兹海峡
+==================================[1m Ai Message [0m==================================
+
+北京今日天气晴朗，适合外出活动~  
+今日国内新闻概要：中方三艘油轮过航霍尔木兹海峡。
+
+```
+
+
+
+### 举例4,代码如下
+
+```
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+# 1.初始化模型需要2个模型应该是model_out直接给agent使用，另外应该model_in,防止中间件里面
+model_out = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b", # 在这里不好，不会灵活适配工具
+    model="gemma4:12b", # 在这里ok
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+model_in = ChatOpenAI(
+    model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 定义工具
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    return f"{city}今天天气晴朗"
+
+
+@tool
+def get_news():
+    """查询今日国内新闻概要"""
+    return ("今日国内新闻概要："
+            "中方三艘油轮过航霍尔木兹海峡")
+
+
+@tool
+def calculate(num1: int, num2: int) -> int:
+    """
+    执行数学计算
+
+    Args:
+        num1: 第一个加数
+        num2: 第二个加数
+    """
+    return num1 + num2
+
+@tool
+def search_stock(symbol: str):
+    """
+    查询股票行情
+
+    Args:
+        symbol: 股票代码
+    """
+    return "该股票今天行情不错"
+
+agent = create_agent(
+    model=model_out,
+    tools=[get_weather, get_news, calculate, search_stock],
+    middleware=[
+        LLMToolSelectorMiddleware(
+            model=model_in,
+            max_tools=1,
+            always_include=["get_weather"]
+        )
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("北京今天天气如何？今日新闻概要")]})
+for msg in resp["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+北京今天天气如何？今日新闻概要
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_vi834fcp)
+ Call ID: call_vi834fcp
+  Args:
+    city: 北京
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+北京今天天气晴朗
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_news (call_pumdc4b8)
+ Call ID: call_pumdc4b8
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+今日国内新闻概要：中方三艘油轮过航霍尔木兹海峡
+==================================[1m Ai Message [0m==================================
+
+北京今天天气晴朗。
+
+今日新闻概要：中方三艘油轮过航霍尔木兹海峡。
+
+```
+
+### 大模型要切换着用，不能一直使用同一个模型，有时候有幻觉。
+
+### 举例5,代码如下
+
+```
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+# 1.初始化模型需要2个模型应该是model_out直接给agent使用，另外应该model_in,防止中间件里面
+model_out = ChatOpenAI(
+    # model="qwen3-vl:latest", # 这里不好用
+    # model="483025889/qwen3.5:9b", #这里不好用
+    model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+model_in = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+## 定义工具
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    return f"{city}今天天气晴朗"
+
+
+@tool
+def get_news():
+    """查询今日国内新闻概要"""
+    return ("今日国内新闻概要："
+            "中方三艘油轮过航霍尔木兹海峡")
+
+
+@tool
+def calculate(num1: int, num2: int) -> int:
+    """
+    执行数学计算
+
+    Args:
+        num1: 第一个加数
+        num2: 第二个加数
+    """
+    return num1 + num2
+
+@tool
+def search_stock(symbol: str):
+    """
+    查询股票行情
+
+    Args:
+        symbol: 股票代码
+    """
+    return "该股票今天行情不错"
+
+agent = create_agent(
+    model=model_out,
+    tools=[get_weather, get_news, calculate, search_stock],
+    middleware=[
+        LLMToolSelectorMiddleware(
+            model=model_in,
+            max_tools=1,
+            always_include=["get_news"]
+        )
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("北京今天天气如何？今日新闻概要")]})
+for msg in resp["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+北京今天天气如何？今日新闻概要
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_jav3kc07)
+ Call ID: call_jav3kc07
+  Args:
+    city: 北京
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+北京今天天气晴朗
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_news (call_pvx5agw0)
+ Call ID: call_pvx5agw0
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+今日国内新闻概要：中方三艘油轮过航霍尔木兹海峡
+==================================[1m Ai Message [0m==================================
+
+北京今天天气晴朗。
+
+今日国内新闻概要：中方三艘油轮过航霍尔木兹海峡。
+
+```
+
+
 
 ## 3.5 ToolRetryMiddleware中间件
 
