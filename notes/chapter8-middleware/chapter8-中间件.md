@@ -2745,23 +2745,669 @@ Name: get_news
 
 ## 3.5 ToolRetryMiddleware中间件
 
-### 举例1：带抖动
+![image-20261021180059705](./chapter8-中间件.assets/image-20261021180059705.png)
 
-### 举例2：无抖动
+### 举例1：带抖动,jitter=True
+
+```
+from datetime import time, datetime
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware, ToolRetryMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+# 1.初始化模型
+model= ChatOpenAI(
+    model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2定义函数
+def write_time(s:str):
+    with open("call_times_with_jitter.txt",'a',encoding='utf-8') as f:
+        f.write(s+'\n')
+
+count = 1
+start_time = None
+# 3.定义工具
+@tool
+def get_weather(city:str):
+    """查询指定城市天气"""
+    global count
+    global start_time
+    interval = 0
+    curr_time = datetime.now()
+    if start_time is None:
+        interval = 0
+    else:
+         # 计算当前调用与上一次调用之间的时间差（秒）
+        interval = (curr_time - start_time).total_seconds()
+    start_time = curr_time
+    res_str = f"第 {count} 次调用，当前时间： {start_time}, 和上次调用间隔 {interval} 秒"
+    count+=1
+    # 写日志
+    write_time(res_str)
+     # 故意抛出 TimeoutError，以此触发中间件的重试机制
+    raise TimeoutError("Not Implemented")
+
+agent = create_agent(
+    model=model,
+    tools=[get_weather],
+    middleware=[
+        ToolRetryMiddleware(
+            max_retries=6,# 最大重试次数（不包含初始的那次调用，一共最多调 1 + 6 = 7 次）
+            backoff_factor=2.0,# 指数退避因子（每次重试等待时间乘以 2）
+            initial_delay=1.0, # 第一次重试前的初始等待时间（1 秒）
+            max_delay=10.0, # 最大等待延迟上限（防止指数增长无限大，限制在 10 秒）
+            jitter=True, # 开启抖动（在等待时间中加入随机性，防止并发请求时出现“惊群效应”）
+            retry_on=(TimeoutError,),# 仅针对捕获到特定的 TimeoutError 异常时才触发重试
+            on_failure="continue" # 当达到最大重试次数依然失败时，Agent 的行为："continue" 表示将错误信息包装后塞回对话历史，让大模型知道失败了并继续决策
+        )
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("北京今天的天气如何？")]})
+
+for msg in resp["messages"]:
+    msg.pretty_print()
+
+
+```
+
+
+
+#### agent输出：
+
+```
+================================[1m Human Message [0m=================================
+
+北京今天的天气如何？
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_9ydhsowe)
+ Call ID: call_9ydhsowe
+  Args:
+    city: 北京
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+Tool 'get_weather' failed after 7 attempts with TimeoutError: Not Implemented. Please try again.
+==================================[1m Ai Message [0m==================================
+
+很抱歉，目前无法获取北京的天气信息，系统出现了技术故障（TimeoutError）。建议稍后再尝试查询，或检查网络连接是否正常。如果您有其他需求，我很乐意为您提供帮助。
+
+```
+
+#### call_times_with_jitter.txt的内容
+
+```
+第 1 次调用，当前时间： 2026-10-21 18:25:52.599075, 和上次调用间隔 0 秒 
+第 2 次调用，当前时间： 2026-10-21 18:25:53.944064, 和上次调用间隔 1.344989 秒 
+第 3 次调用，当前时间： 2026-10-21 18:25:56.375922, 和上次调用间隔 2.431858 秒 
+第 4 次调用，当前时间： 2026-10-21 18:26:00.375263, 和上次调用间隔 3.999341 秒 
+第 5 次调用，当前时间： 2026-10-21 18:26:07.924225, 和上次调用间隔 7.548962 秒 
+第 6 次调用，当前时间： 2026-10-21 18:26:19.185732, 和上次调用间隔 11.261507 秒 
+第 7 次调用，当前时间： 2026-10-21 18:26:27.930162, 和上次调用间隔 8.74443 秒 
+```
+
+
+
+
+### 举例2：无抖动,jitter=False
+
+```
+from datetime import time, datetime
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware, ToolRetryMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+# 1.初始化模型
+model= ChatOpenAI(
+    model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2定义函数
+def write_time(s:str):
+    with open("call_times_with_jitter.txt",'a',encoding='utf-8') as f:
+        f.write(s+'\n')
+
+count = 1
+start_time = None
+# 3.定义工具
+@tool
+def get_weather(city:str):
+    """查询指定城市天气"""
+    global count
+    global start_time
+    interval = 0
+    curr_time = datetime.now()
+    if start_time is None:
+        interval = 0
+    else:
+         # 计算当前调用与上一次调用之间的时间差（秒）
+        interval = (curr_time - start_time).total_seconds()
+    start_time = curr_time
+    res_str = f"第 {count} 次调用，当前时间： {start_time}, 和上次调用间隔 {interval} 秒"
+    count+=1
+    # 写日志
+    write_time(res_str)
+     # 故意抛出 TimeoutError，以此触发中间件的重试机制
+    raise TimeoutError("Not Implemented")
+
+agent = create_agent(
+    model=model,
+    tools=[get_weather],
+    middleware=[
+        ToolRetryMiddleware(
+            max_retries=6,# 最大重试次数（不包含初始的那次调用，一共最多调 1 + 6 = 7 次）
+            backoff_factor=2.0,# 指数退避因子（每次重试等待时间乘以 2）
+            initial_delay=1.0, # 第一次重试前的初始等待时间（1 秒）
+            max_delay=10.0, # 最大等待延迟上限（防止指数增长无限大，限制在 10 秒）
+            jitter=False, # 关闭抖动，意味着重试机制从“随机化的指数退避”退化成了“严格固定的指数退避
+            retry_on=(TimeoutError,),# 仅针对捕获到特定的 TimeoutError 异常时才触发重试
+            on_failure="continue" # 当达到最大重试次数依然失败时，Agent 的行为："continue" 表示将错误信息包装后塞回对话历史，让大模型知道失败了并继续决策
+        )
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("北京今天的天气如何？")]})
+
+# 1. 你的提问 -> 2. AI 决定调用工具 -> 3. 重试失败后的错误反馈 -> 4. AI 最终给出的兜底回复
+for msg in resp["messages"]:
+    msg.pretty_print()
+
+
+```
+
+#### agent输出：
+
+```
+================================[1m Human Message [0m=================================
+
+北京今天的天气如何？
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_qkkbxxzh)
+ Call ID: call_qkkbxxzh
+  Args:
+    city: 北京
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+Tool 'get_weather' failed after 7 attempts with TimeoutError: Not Implemented. Please try again.
+==================================[1m Ai Message [0m==================================
+
+很抱歉，当前无法获取北京的天气信息。可能是服务暂时不可用，建议您稍后再尝试查询，或通过其他天气应用获取实时数据。
+
+```
+
+#### call_times_with_jitter.txt的内容
+
+```
+第 1 次调用，当前时间： 2026-10-21 18:25:52.599075, 和上次调用间隔 0 秒   # 带抖动
+第 2 次调用，当前时间： 2026-10-21 18:25:53.944064, 和上次调用间隔 1.344989 秒 
+第 3 次调用，当前时间： 2026-10-21 18:25:56.375922, 和上次调用间隔 2.431858 秒 
+第 4 次调用，当前时间： 2026-10-21 18:26:00.375263, 和上次调用间隔 3.999341 秒 
+第 5 次调用，当前时间： 2026-10-21 18:26:07.924225, 和上次调用间隔 7.548962 秒 
+第 6 次调用，当前时间： 2026-10-21 18:26:19.185732, 和上次调用间隔 11.261507 秒 
+第 7 次调用，当前时间： 2026-10-21 18:26:27.930162, 和上次调用间隔 8.74443 秒 
+第 1 次调用，当前时间： 2026-10-21 18:35:59.178381, 和上次调用间隔 0 秒  # 无抖动
+第 2 次调用，当前时间： 2026-10-21 18:36:00.189015, 和上次调用间隔 1.010634 秒
+第 3 次调用，当前时间： 2026-10-21 18:36:02.286845, 和上次调用间隔 2.09783 秒
+第 4 次调用，当前时间： 2026-10-21 18:36:06.291430, 和上次调用间隔 4.004585 秒
+第 5 次调用，当前时间： 2026-10-21 18:36:14.299936, 和上次调用间隔 8.008506 秒
+第 6 次调用，当前时间： 2026-10-21 18:36:24.343260, 和上次调用间隔 10.043324 秒
+第 7 次调用，当前时间： 2026-10-21 18:36:34.349634, 和上次调用间隔 10.006374 秒
+
+```
+
+#### 有抖动的时候，不能保证严格安装指数来增加，无抖动能保证严格安装指数来增加
+
+#### 小结
+
+将 `jitter` 从 `True` 改为 `False`（关闭抖动），意味着重试机制从“随机化的指数退避”退化成了“严格固定的指数退避”。
+
+为了更直观理解，看一下这两种状态下的核心区别：
+
+**1. 理论上的等待时间对比**
+
+在这段代码中，你设置了 `initial_delay=1.0`（初始延迟 1 秒）、`backoff_factor=2.0`（倍数是 2）以及 `max_delay=10.0`（最大延迟 10 秒）。
+
+当工具持续报错时，关闭抖动（`jitter=False`）与开启抖动（`jitter=True`）的等待延迟（Interval）对比如下：
+
+| 重试轮次    | 理想基础延迟 (秒)                        | 关闭抖动 (jitter=False) 的实际等待  | 开启抖动 (jitter=True) 的实际等待 |
+| ----------- | ---------------------------------------- | ----------------------------------- | --------------------------------- |
+| 第 1 次重试 | $1.0 \times 2^0 = 1.0$                   | 严格等于 1.0 秒                     | 在 $0 \sim 1.0$ 秒之间随机        |
+| 第 2 次重试 | $1.0 \times 2^1 = 2.0$                   | 严格等于 2.0 秒                     | 在 $0 \sim 2.0$ 秒之间随机        |
+| 第 3 次重试 | $1.0 \times 2^2 = 4.0$                   | 严格等于 4.0 秒                     | 在 $0 \sim 4.0$ 秒之间随机        |
+| 第 4 次重试 | $1.0 \times 2^3 = 8.0$                   | 严格等于 8.0 秒                     | 在 $0 \sim 8.0$ 秒之间随机        |
+| 第 5 次重试 | $1.0 \times 2^4 = 16.0 \rightarrow 10.0$ | 严格等于 10.0 秒 (受限于 max_delay) | 在 $0 \sim 10.0$ 秒之间随机       |
+| 第 6 次重试 | $1.0 \times 2^5 = 32.0 \rightarrow 10.0$ | 严格等于 10.0 秒 (受限于 max_delay) | 在 $0 \sim 10.0$ 秒之间随机       |
+
+> 💡 现象结论：
+>
+> 关闭抖动后，查看生成的 `call_times_with_jitter.txt` 日志，你会发现输出的 `interval` 数字会极其精准地趋近于 `1.0`、`2.0`、`4.0`、`8.0`、`10.0`、`10.0`。
+
+**2. 为什么要引入 Jitter（抖动）？关闭它会有什么问题？**
+
+在**单用户、单并发**的测试环境下，关闭 jitter没有任何副作用，甚至能让等待时间非常规律、可预测。
+
+但在**高并发的生产环境**中，关闭 jitter会引发灾难性的`“惊群效应（Thundering Herd Problem）”`：
+
+- 没有 Jitter 的惨剧（`jitter=False`）：
+
+  假设某刻天气 API 服务突然宕机了 1 秒。此时刚好有 1000 个用户同时发起了查询。因为这 1000 个请求同时失败，并且它们都严格死板地等待 1 秒、2 秒、4 秒……
+
+  这意味着，在第 1 秒、第 3 秒、第 7 秒的那个**精准的时间点**上，这 1000 个请求会**整整齐齐地再次同时轰炸服务器**。刚刚复活的服务器瞬间又被这波整齐的峰值流量压垮，形成恶性循环。
+
+- 引入 Jitter 的优势（`jitter=True`）：
+
+  通过给重试时间加上随机性，这 1000 个请求会在 $0 \sim 1$ 秒、$0 \sim 2$ 秒的区间内**均匀地错开（削峰填谷）**。流量被平摊到了整条时间轴上，服务器就能轻松地分批处理完这些请求。
+
+**总结：**
+
+- `jitter=False`（你当前的代码）：重试间隔**死板、精准、可预测**。适合本地调试、测试重试逻辑是否生效。
+- `jitter=True`：重试间隔**随机、错开、更安全**。适合线上生产环境，防止把下游第三方 API 或数据库冲垮。
+
+
 
 ## 3.6ModelRetryMiddleware中间件
 
+![image-20261021185644445](./chapter8-中间件.assets/image-20261021185644445.png)
+
 ### 举例1：继续运行
+
+```
+from datetime import time, datetime
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware, ToolRetryMiddleware, \
+    ModelRetryMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+agent = create_agent(
+    model="ollama:qwen3-vl-cat", # 这个模型是瞎写的
+    middleware=[
+        ModelRetryMiddleware(
+            max_retries=6,
+            backoff_factor=2.0,
+            initial_delay=1.0,
+            max_delay=10.0,
+            on_failure='continue',
+            jitter=False
+        ),
+    ]
+)
+response = agent.invoke({
+    "messages": [HumanMessage("你好")]
+})
+
+for msg in response["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+你好
+==================================[1m Ai Message [0m==================================
+
+Model call failed after 7 attempts with ResponseError: model 'qwen3-vl-cat' not found (status code: 404)
+
+```
+
+
 
 ### 举例2：抛异常
 
+```
+from datetime import time, datetime
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware, ToolRetryMiddleware, \
+    ModelRetryMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+agent = create_agent(
+    model="ollama:qwen3-vl-cat", # 这个模型是瞎写的
+    middleware=[
+        ModelRetryMiddleware(
+            max_retries=6,
+            backoff_factor=2.0,
+            initial_delay=1.0,
+            max_delay=10.0,
+            on_failure='error',
+            jitter=False
+        ),
+    ]
+)
+response = agent.invoke({
+    "messages": [HumanMessage("你好")]
+})
+
+for msg in response["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+![image-20261021191134266](./chapter8-中间件.assets/image-20261021191134266.png)
+
+
+
 ## 3.7 LLMToolEmulator
+
+![image-20261021191458424](./chapter8-中间件.assets/image-20261021191458424.png)
+
+### 举例
+
+```
+
+from langchain_core import messages
+from langchain.agents.middleware import SummarizationMiddleware, LLMToolSelectorMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from typing import Union, Dict, Any
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langgraph.config import get_stream_writer
+from rich import print as rprint
+from utils.tool_utils import query_weather_from_web,query_news_from_web
+
+# 1.初始化模型需要2个模型应该是model_out直接给agent使用，另外应该model_in,防止中间件里面
+model_out = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+model_in = ChatOpenAI(
+    model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    # model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    return f"{city}今天天气晴朗"
+
+agent = create_agent(
+    model=model_out,
+    tools=[get_weather],
+    middleware=[
+        LLMToolSelectorMiddleware(
+            model=model_in,
+
+        ),
+    ]
+)
+
+response = agent.invoke({
+    "messages": [HumanMessage("今天北京天气如何")]
+})
+
+for msg in response["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出,好像和云端大模型的输出有点不一样
+
+```
+================================[1m Human Message [0m=================================
+
+今天北京天气如何
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_vqrjbzas)
+ Call ID: call_vqrjbzas
+  Args:
+    city: 北京
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+北京今天天气晴朗
+==================================[1m Ai Message [0m==================================
+
+今天北京天气晴朗。
+
+```
+
+
 
 ## 3.8 ContextEditingMiddleware中间件
 
+![image-20261021192347390](./chapter8-中间件.assets/image-20261021192347390.png)
+
 ### 1.实验组-启用上下文编辑
 
-### 2.对照组-不裁剪上下文
+```
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    model="gemma4:12b",
+    profile={"max_input_tokens": 128_000},
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 全局计数器，用于在工具内部追踪这是第几次被触发
+count = 0
+
+
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    global count
+
+    # 故意返回一段非常冗长、包含大量 Token 的文本，用于测试中间件的 Token 清理/截断功能
+    return (f"当前是第 {count} 次调用工具，{city}今天天气晴朗"
+            f"天气非常好，北风，非常适合出行，盼望着，盼望着，"
+            f"春天来了。我喜欢春天，你喜欢吗，天气真的很不错"
+            f"万里无云，天气晴朗，春和景明，哈哈哈哈哈哈，这是凑字数的"
+            f"真不错，天气非常好，适合出行，这里token挺多的"
+            f"可以出门玩，可以跑步，钓鱼，爬山，一切都很好哈哈哈")
+
+agent = create_agent(
+    model=model,
+    tools=[get_weather],
+    middleware=[
+        ContextEditingMiddleware(
+            # 配置“清除工具调用记录”策略
+            # 作用：当上下文中的历史消息累积满足特定条件时，自动裁剪/删除旧的工具调用及返回结果
+            edits=[
+                ClearToolUsesEdit(
+                    trigger=50,# 触发阈值（例如：当工具返回的 Token 数或消息数达到设定值时触发，具体取决于LangChain版本实现）
+                    keep=0 # 触发清理时，保留最近的几次工具调用。这里设置为 0 代表全部清除旧的工具消息
+                )
+            ]
+        )
+    ],
+    # 内存检查点管理器：用于保存多轮对话的上下文（实现多轮对话记忆）
+    checkpointer=InMemorySaver(),
+
+)
+
+# 配置项：定义会话的 thread_id。相同的 id 代表同一个用户的连续对话
+config = {"configurable":{"thread_id":"1"}}
+# 模拟连续 3 轮的用户多轮对话
+for i in range(3):
+     print("=" * 30, f"当前是第 {i + 1} 轮调用", "=" * 30)
+     count +=1
+     # 调用智能体，传入当前轮次的用户提问，并携带历史会话配置 config
+     resp = agent.invoke({"messages":[HumanMessage(f"第 {i + 1} 次询问：今天北京天气如何，一句话回答")]},config=config)
+     for msg in resp['messages']:
+         # msg.pretty_print()
+         if isinstance(msg,AIMessage):
+             if not msg.tool_calls:
+                 print(f"本次token用量：{msg.usage_metadata}")
+
+
+
+```
+
+
+
+#### agent输出
+
+```
+============================== 当前是第 1 轮调用 ==============================
+本次token用量：{'input_tokens': 105, 'output_tokens': 8, 'total_tokens': 113, 'input_token_details': {'cache_read': 66}, 'output_token_details': {}}
+============================== 当前是第 2 轮调用 ==============================
+本次token用量：{'input_tokens': 105, 'output_tokens': 8, 'total_tokens': 113, 'input_token_details': {'cache_read': 66}, 'output_token_details': {}}
+本次token用量：{'input_tokens': 132, 'output_tokens': 92, 'total_tokens': 224, 'input_token_details': {'cache_read': 100}, 'output_token_details': {}}
+============================== 当前是第 3 轮调用 ==============================
+本次token用量：{'input_tokens': 105, 'output_tokens': 8, 'total_tokens': 113, 'input_token_details': {'cache_read': 66}, 'output_token_details': {}}
+本次token用量：{'input_tokens': 132, 'output_tokens': 92, 'total_tokens': 224, 'input_token_details': {'cache_read': 100}, 'output_token_details': {}}
+本次token用量：{'input_tokens': 162, 'output_tokens': 146, 'total_tokens': 308, 'input_token_details': {'cache_read': 127}, 'output_token_details': {}}
+
+```
+
+
+
+### 说明
+
+![image-20261021201306660](./chapter8-中间件.assets/image-20261021201306660.png)
+
+### 2.对照组-不裁剪上下文,没有使用任何中间件
+
+```
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    # model="483025889/qwen3.5:9b",
+    model="gemma4:12b",
+    profile={"max_input_tokens": 128_000},
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 全局计数器，用于在工具内部追踪这是第几次被触发
+count = 0
+
+
+@tool
+def get_weather(city: str):
+    """查询指定城市天气"""
+    global count
+
+    # 故意返回一段非常冗长、包含大量 Token 的文本，用于测试中间件的 Token 清理/截断功能
+    return (f"当前是第 {count} 次调用工具，{city}今天天气晴朗"
+            f"天气非常好，北风，非常适合出行，盼望着，盼望着，"
+            f"春天来了。我喜欢春天，你喜欢吗，天气真的很不错"
+            f"万里无云，天气晴朗，春和景明，哈哈哈哈哈哈，这是凑字数的"
+            f"真不错，天气非常好，适合出行，这里token挺多的"
+            f"可以出门玩，可以跑步，钓鱼，爬山，一切都很好哈哈哈")
+
+# 作为对照，这里不使用中间件
+agent = create_agent(
+    model=model,
+    tools=[get_weather],
+    # 内存检查点管理器：用于保存多轮对话的上下文（实现多轮对话记忆）
+    checkpointer=InMemorySaver(),
+
+)
+
+# 配置项：定义会话的 thread_id。相同的 id 代表同一个用户的连续对话
+config = {"configurable":{"thread_id":"1"}}
+# 模拟连续 3 轮的用户多轮对话
+for i in range(3):
+     print("=" * 30, f"当前是第 {i + 1} 轮调用", "=" * 30)
+     count +=1
+     # 调用智能体，传入当前轮次的用户提问，并携带历史会话配置 config
+     resp = agent.invoke(
+         {"messages":[HumanMessage(f"第 {i + 1} 次询问：今天北京天气如何，一句话回答")]},
+         config=config
+     )
+     for msg in resp['messages']:
+         # msg.pretty_print()
+         if isinstance(msg,AIMessage):
+             if not msg.tool_calls:
+                 print(f"本次token用量：{msg.usage_metadata}")
+
+
+
+```
+
+
+
+#### agent输出
+
+```
+============================== 当前是第 1 轮调用 ==============================
+本次token用量：{'input_tokens': 196, 'output_tokens': 12, 'total_tokens': 208, 'input_token_details': {'cache_read': 66}, 'output_token_details': {}}
+============================== 当前是第 2 轮调用 ==============================
+本次token用量：{'input_tokens': 196, 'output_tokens': 12, 'total_tokens': 208, 'input_token_details': {'cache_read': 66}, 'output_token_details': {}}
+本次token用量：{'input_tokens': 227, 'output_tokens': 101, 'total_tokens': 328, 'input_token_details': {'cache_read': 191}, 'output_token_details': {}}
+============================== 当前是第 3 轮调用 ==============================
+本次token用量：{'input_tokens': 196, 'output_tokens': 12, 'total_tokens': 208, 'input_token_details': {'cache_read': 66}, 'output_token_details': {}}
+本次token用量：{'input_tokens': 227, 'output_tokens': 101, 'total_tokens': 328, 'input_token_details': {'cache_read': 191}, 'output_token_details': {}}
+本次token用量：{'input_tokens': 386, 'output_tokens': 98, 'total_tokens': 484, 'input_token_details': {'cache_read': 256}, 'output_token_details': {}}
+
+```
+
+### 可以看到，不裁剪消耗的token非常厉害
+
+
 
 ## 3.9 FileSystemSearchMiddleware中间件
 

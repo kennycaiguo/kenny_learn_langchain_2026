@@ -2,15 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm7-ModelFallbackMiddleware.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm8-LLMToolSelectorMiddleware.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm10-ModelRetryMiddleware.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm11-LLMToolEmulator.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm12-ContextEditingMiddleware.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm9-ToolRetryMiddleware.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm2-HumanInTheLoopMiddleware.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm2-HumanInTheLoopMiddleware.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm3-PIIMiddleWare.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm3-PIIMiddleWare.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm4-TodoListMiddleware.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm4-TodoListMiddleware.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm5-ModelCallLimitMiddleware.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm5-ModelCallLimitMiddleware.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm6-ToolCallLimitedMiddleware.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter8-middleware/ch8-dm6-ToolCallLimitedMiddleware.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../notes/chapter8-middleware/chapter8-中间件.md" beforeDir="false" afterPath="$PROJECT_DIR$/../notes/chapter8-middleware/chapter8-中间件.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -202,6 +198,7 @@
       <workItem from="1792286822285" duration="8068000" />
       <workItem from="1792452600496" duration="8103000" />
       <workItem from="1792543900248" duration="9926000" />
+      <workItem from="1792626857712" duration="9350000" />
     </task>
     <servers />
   </component>
