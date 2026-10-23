@@ -3411,31 +3411,916 @@ for i in range(3):
 
 ## 3.9 FileSystemSearchMiddleware中间件
 
+![image-20261022191009043](./chapter8-中间件.assets/image-20261022191009043.png)
+
+### 文件夹结构
+
+![image-20261022190421557](./chapter8-中间件.assets/image-20261022190421557.png)
+
+### 参考代码
+
+```
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
+    FilesystemFileSearchMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2.创建agent
+agent = create_agent(
+    model=model,
+    middleware=[
+        FilesystemFileSearchMiddleware(
+            root_path="../todo_workspace",
+            use_ripgrep=True,
+            max_file_size_mb=10
+        )
+    ]
+)
+
+result = agent.invoke({"messages":[
+    HumanMessage("找到包含 add 函数的Python或Jupyter文件")
+]})
+
+for msg in result["messages"]:
+    msg.pretty_print()
+
+
+
+```
+
+### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+找到包含 add 函数的Python或Jupyter文件
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  glob_search (call_i1sspbak)
+ Call ID: call_i1sspbak
+  Args:
+    pattern: **/*.py
+  glob_search (call_xpm5rfid)
+ Call ID: call_xpm5rfid
+  Args:
+    pattern: **/*.ipynb
+=================================[1m Tool Message [0m=================================
+Name: glob_search
+
+/my_add.py
+/test_my_add.py
+=================================[1m Tool Message [0m=================================
+Name: glob_search
+
+No files found
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  grep_search (call_uefx0cux)
+ Call ID: call_uefx0cux
+  Args:
+    pattern: def\s+add\(
+    path: .
+    include: *.py
+    output_mode: files_with_matches
+=================================[1m Tool Message [0m=================================
+Name: grep_search
+
+/my_add.py
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  grep_search (call_51jplkq2)
+ Call ID: call_51jplkq2
+  Args:
+    pattern: def\s+add\(
+    path: .
+    include: *.py
+    output_mode: content
+=================================[1m Tool Message [0m=================================
+Name: grep_search
+
+/my_add.py:1:def add(a:int,b:int) -> int:
+==================================[1m Ai Message [0m==================================
+
+已找到包含 `add` 函数的 Python 文件：
+
+- `/my_add.py`
+
+```
+
+
+
 ## 3.10 Shell tool中间件
 
-## 3.11 Filesystem中间件
+## 不支持window,无法测试
 
-## 3.12 Subagent中间件
+## 3.11 Filesystem中间件 无法演示
+
+## 3.12 Subagent中间件 无法演示
+
+
 
 # 4.多个中间件组合及执行顺序
 
+![image-20261022191547336](./chapter8-中间件.assets/image-20261022191547336.png)
+
+![image-20261022192144950](./chapter8-中间件.assets/image-20261022192144950.png)
+
+### 举例
+
+```
+from langchain.agents import create_agent
+from langchain.agents.middleware import FilesystemFileSearchMiddleware
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
+    FilesystemFileSearchMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+# 2.创建agent
+from langchain.agents.middleware import AgentMiddleware
+
+
+class Middleware1(AgentMiddleware):
+    def before_model(self, state, runtime):
+        print("[中间件1] before_model")
+        return None
+
+    def after_model(self, state, runtime):
+        print("[中间件1] after_model")
+        return None
+
+
+class Middleware2(AgentMiddleware):
+    def before_model(self, state, runtime):
+        print("[中间件2] before_model")
+        return None
+
+    def after_model(self, state, runtime):
+        print("[中间件2] after_model")
+        return None
+
+
+class Middleware3(AgentMiddleware):
+    def before_model(self, state, runtime):
+        print("[中间件3] before_model")
+        return None
+
+    def after_model(self, state, runtime):
+        print("[中间件3] after_model")
+        return None
+
+
+agent = create_agent(
+    model=model,
+    tools=[],
+    middleware=[Middleware3(), Middleware1(), Middleware2()]
+)
+
+print("\n执行一次调用，观察顺序：")
+agent.invoke({"messages": [{"role": "user", "content": "测试"}]})
+```
+
+
+
+#### agent输出
+
+
+
 # 5.自定义中间件
+
+![image-20261022192507637](./chapter8-中间件.assets/image-20261022192507637.png)
 
 ## 5.1什么是hook函数(钩子函数)
 
+![image-20261022193209365](./chapter8-中间件.assets/image-20261022193209365.png)
+
+![image-20261022193308009](./chapter8-中间件.assets/image-20261022193308009.png)
+
 ## 5.2LangChain的hook函数分类
+
+![image-20261022193345345](./chapter8-中间件.assets/image-20261022193345345.png)
 
 ### 类型1： Node-style hooks(节点风格钩子)
 
+![image-20261022193451527](./chapter8-中间件.assets/image-20261022193451527.png)
+
 ### 类型2： Wrap-style hooks(包装风格钩子)
 
+![image-20261022193556275](./chapter8-中间件.assets/image-20261022193556275.png)
+
 ## 5.3 Node-style hooks函数用法
+
+![image-20261022193713646](./chapter8-中间件.assets/image-20261022193713646.png)
 
 ### 5.3.1基本用法
 
 #### 5.3.1.1基于装饰器实现
 
+#### 举例代码1基本用法基于装饰器实现
+
+```
+from typing import Any
+from langchain.agents.middleware import before_model, after_model, AgentState, before_agent, after_agent, \
+    AgentMiddleware
+from langgraph.runtime import Runtime
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
+    FilesystemFileSearchMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+@before_model()
+def before_model_middleware(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += "----> before_model <-----"
+    return None
+
+@after_model()
+def after_model_middleware(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += "----> after_model <-----"
+    return None
+
+@before_agent()
+def before_agent_middleware(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += "----> before_agent <-----"
+    return None
+
+@after_agent()
+def after_agent_middleware(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += "----> after_agent <-----"
+    return None
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+agent = create_agent(
+    model=model,
+    middleware=[before_model_middleware, after_model_middleware,before_agent_middleware, after_agent_middleware],
+)
+
+response = agent.invoke({
+    "messages": [HumanMessage("2的12次方等于几")]
+})
+
+for msg in response["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+2的12次方等于几----> before_agent <---------> before_model <-----
+==================================[1m Ai Message [0m==================================
+
+2 的 12 次方等于 **4096**。
+
+计算过程简述：
+$2^{12} = 2^{10} \times 2^2 = 1024 \times 4 = 4096$。----> after_model <---------> after_agent <-----
+
+```
+
+
+
+#### 举例代码2can_jump_to参数装饰器实现
+
+```
+from typing import Any
+from langchain.agents.middleware import before_model, after_model, AgentState
+from langgraph.runtime import Runtime
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
+    FilesystemFileSearchMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+@tool
+def get_news() -> str:
+    """获取当日新闻"""
+    return f"美加墨世界杯今日开幕"
+
+# 在模型（LLM）执行前触发。允许跳转到 "tools" 节点。
+@before_model(can_jump_to=["tools"])
+def force_tool_first(state: AgentState,runtime:Runtime) -> dict[str, Any] | None:
+    """
+    【业务场景：强行拦截并触发工具】
+    如果用户输入包含 "direct tool"，则跳过本次大模型的思考/生成阶段，
+    直接伪造一个大模型的 tool_calls 意图，强行把控制权移交给工具执行节点。
+    """
+    text = state["messages"][-1].content
+    if isinstance(text,str) and "direct tool" in text:
+        print("[MIDDLEWARE] before_model: jump_to='tools'")
+
+        # 人工构造一个大模型的消息对象（AIMessage）
+        # 欺骗系统，让系统误以为这是模型自己决定要调用的工具
+        fake_toolcall=AIMessage(
+            content="人工构造消息",
+            tool_calls=[
+                {
+                    "name":"get_news",
+                    "args":{},
+                     "id": "call_force_weather_001",
+                }
+            ]
+        )
+
+        # 返回更新后的状态：注入伪造的消息，并明确指定下一步跳转到 "tools" 节点
+        return {
+            "messages":[fake_toolcall],
+            "jump_to":"tools",
+        }
+    # 如果不满足触发条件，返回 None，流程正常向下流转（继续让 LLM 思考）
+    return None
+
+# 在模型（LLM）执行生成之后触发。允许重新跳转回 "model" 节点。
+@after_model(can_jump_to=["model"])
+def retry_with_extra_instruction(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    """
+    【业务场景：反思/重试机制】
+    如果大模型已经生成了回答，但发现用户最初的请求包含 "retry model"，
+    则动态追加一条系统提示词（SystemMessage），强行让模型重新生成（重试）一次。
+    """
+    # 倒序遍历消息历史，找到最近的一次用户输入（human 消息）
+    user_text = ""
+    for msg in reversed(state["messages"]):
+        if getattr(msg,"type","") == "human":
+            user_text = getattr(msg,"content","")
+            break
+    # 检查用户输入是否包含触发重试的关键字
+    if isinstance(user_text,str) and "retry model" in user_text.lower():
+         # 【核心防御】：防止无限循环重跳（死循环）
+         # 检查消息历史中是否已经注入过这条特殊的系统提示。如果有，说明已经重试过了，不再重复干预。
+         already_injected = any(
+           isinstance(getattr(msg,"content",None),str)
+           and "你必须以【二次回答】开头" in msg.content
+           for msg in state["messages"]
+         )
+         if already_injected:
+             return None  # 已注入过，直接放行，结束重试流程
+         print("[MIDDLEWARE] retry_with_extra_instruction: jump_to='model' with extra system instruction")
+         # 返回更新后的状态：追加强力约束的系统消息，并将指针跳回 "model" 节点重新执行
+         return {
+             "messages":[SystemMessage("你必须以【二次回答】开头，并且只用一句话回答。")],
+             "jump_to":"model",
+         }
+
+
+# 在模型（LLM）执行前触发。允许直接跳转到 "end" 节点（强行终止）。
+@before_model(can_jump_to=["end"])
+def overflow_context_processor(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    """
+    【业务场景：安全卫士/异常拦截】
+    模拟上下文窗口溢出（Token超限）或其他严重的系统阻断情况。
+    一旦触发，直接熔断流程，拒绝让大模型继续处理，直接报错或返回兜底文案。
+    """
+    # 假装溢出,模拟检查最后一条消息是否包含 overflow 标识
+    if "overflow" in state["messages"][-1].content:
+        print("[MIDDLEWARE] before_model: jump_to='end' when contenxt window overflow")
+
+        # 构造兜底的结束消息，并直接指定跳转到 "end" 终止 Agent 运行
+        return {
+            "messages":[AIMessage("上下文窗口溢出，终止")],
+            "jump_to":"end",
+        }
+
+agent = create_agent(
+    model=model,
+    tools=[get_news],
+    # # 将定义的中间件按照顺序挂载到 Agent 中（注意：执行顺序会严格按照列表声明顺序）
+    middleware=[force_tool_first,retry_with_extra_instruction,overflow_context_processor],
+)
+
+def run_once(user_input:str):
+    resp = agent.invoke({
+        "messages":[{"role": "user", "content": user_input}]
+    })
+
+    for msg in resp["messages"]:
+        msg.pretty_print()
+
+if __name__ == "__main__":
+    # Case 1: 直接跳 tools
+    # 预期表现：
+    # 1. 触发 force_tool_first，打印 "[MIDDLEWARE] before_model: jump_to='tools'"
+    # 2. 绕过 LLM 的首轮思考，直接调用 `get_news` 工具
+    # 3. 工具返回结果后，LLM 总结工具结果并输出
+    print('=' * 30, '-> Case 1 <-', '=' * 30)
+    run_once("请帮我查今日新闻 direct tool")
+
+    # Case 2: 输出后跳回 model
+    # 预期表现：
+    # 1. 正常进入 LLM 生成第 1 版回答
+    # 2. 触发 retry_with_extra_instruction，打印 "[MIDDLEWARE] after_model: jump_to='model'..."
+    # 3. 注入系统提示词后，LLM 被强行拉回并生成第 2 版回答
+    # 4. 最终输出应带有“【二次回答】”前缀
+    print('=' * 30, '-> Case 2 <-', '=' * 30)
+    run_once("请随便介绍一下 LangChain retry model")
+
+    # Case 3:
+    # 预期表现：
+    # 1. 触发 overflow_context_processor 中间件
+    # 2. 直接打印终止信息并退出，LLM 根本不会接收到这个请求
+    print('=' * 30, '-> Case 3 <-', '=' * 30)
+    run_once("你好 overflow")
+    # Case 4: 正常流程
+    # 预期表现：
+    # 1. 没有任何中间件被触发（不满足任何关键字）
+    # 2. Agent 走正常的 OOTB（Out of the box）标准工作流：User -> Model -> Call Tool -> Model -> End
+    print('=' * 30, '-> Case 4 <-', '=' * 30)
+    run_once("今日新闻摘要？")
+```
+
+#### agent输出
+
+````
+============================== -> Case 1 <- ==============================
+[MIDDLEWARE] before_model: jump_to='tools'
+================================[1m Human Message [0m=================================
+
+请帮我查今日新闻 direct tool
+==================================[1m Ai Message [0m==================================
+
+人工构造消息
+Tool Calls:
+  get_news (call_force_weather_001)
+ Call ID: call_force_weather_001
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+美加墨世界杯今日开幕
+==================================[1m Ai Message [0m==================================
+
+以下是为您获取的今日热点新闻：
+
+**新闻标题：** 美加墨世界杯今盛大开幕
+**内容：** 今日正值国际足联世界杯开幕，备受瞩目的赛事在北美三国正式拉开帷幕。
+============================== -> Case 2 <- ==============================
+[MIDDLEWARE] retry_with_extra_instruction: jump_to='model' with extra system instruction
+================================[1m Human Message [0m=================================
+
+请随便介绍一下 LangChain retry model
+==================================[1m Ai Message [0m==================================
+
+LangChain 是一个用于创建语言模型应用程序的软件框架，它不直接拥有叫做 “retry model” 的特定模型。不过，您可能是想了解 LangChain 在 AI模型应用中的错误处理与自动重试机制，这是其重要特性之一。
+
+## LangChain 中的重试（Retry）功能说明
+
+LangChain 提供了强大的错误恢复和重试机制，帮助用户在使用大语言模型时更加稳定地处理请求失败、超时等问题。以下是主要相关内容：
+
+### 1. **Retry Configuration**
+在调用多个 LLM（Language Model）时，可以通过配置来指定在特定条件下自动重新发送请求的选项。通常与运行环境结合使用，比如 `RunnableWithRetry` 等工具。
+
+### 2. **Retry on Exception**
+当某个工具、回调或模型执行失败时，LangChain 允许设置是否应重试。例如：
+- API 错误（如429过多请求、503服务不可用）
+- 请求超时（Request Timeout）
+- Token 限制导致的中断
+
+### 3. **Retry Parameters**
+常见的可配置项包括：
+- `max_retries`: 最大重试次数（例如设置为0表示不重试）
+- `retry_after_milliseconds`: 每次重试之间的延迟时间（如指数退避策略）
+- `retryable_exceptions`: 需要重试的异常类型（例如429、500、Timeout等）
+
+### 4. **Retry Example**
+```python
+# 示例：使用 LangChain 的工具进行 LLM 调用并配置重试机制
+from langchain_retry import RunnableWithRetry
+
+llm = ChatOpenAI(model="gpt-3.5-turbo")
+retried_llm = RunnableWithRetry(llm, max_retries=2)
+
+response = retried_llm.run("写一段代码")
+```
+
+### 5. **最佳实践**
+- 合理设置重试次数和间隔时间，避免对服务器造成压力
+- 结合监控工具（如 OpenTelemetry）记录重试日志和数据，便于追踪问题
+- 对于关键业务场景，建议限制重试逻辑并使用人工回退机制
+
+## 总结
+
+LangChain中的“retry model”并非独立存在的模型，而是指在 AI调用过程中，框架提供的自动错误恢复和请求重试能力。这一设计确保了应用在面对网络波动、API异常时仍能保持稳定运行。如果您有特定场景或配置需求，可以进一步说明，我可以提供更针对性的建议或代码示例。
+================================[1m System Message [0m================================
+
+你必须以【二次回答】开头，并且只用一句话回答。
+==================================[1m Ai Message [0m==================================
+
+【二次回答】LangChain 中的重试机制主要通过配置错误处理和自动重传来提高 AI 应用稳定性，而非独立的重试模型。
+============================== -> Case 3 <- ==============================
+[MIDDLEWARE] before_model: jump_to='end' when contenxt window overflow
+================================[1m Human Message [0m=================================
+
+你好 overflow
+==================================[1m Ai Message [0m==================================
+
+上下文窗口溢出，终止
+============================== -> Case 4 <- ==============================
+================================[1m Human Message [0m=================================
+
+今日新闻摘要？
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_news (call_krx5mqox)
+ Call ID: call_krx5mqox
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+美加墨世界杯今日开幕
+==================================[1m Ai Message [0m==================================
+
+今日的热门新闻是：**美加墨世界杯今日开幕**。这是一个备受全球瞩目的国际体育赛事开端，想必有许多精彩比赛即将上演！
+
+````
+
+
+
 #### 5.3.1.2 基于类实现
+
+#### 举例代码1基本用法
+
+```
+from typing import Any
+from langchain.agents.middleware import AgentMiddleware,AgentState, before_agent, after_agent
+from langgraph.runtime import Runtime
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
+    FilesystemFileSearchMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+class MyMiddleware(AgentMiddleware): # 中间件类
+    def before_model_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> before_model <-----"
+        return None
+
+    def after_model_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> after_model <-----"
+        return None
+
+
+    def before_agent_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> before_agent <-----"
+        return None
+
+    def after_agent_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> after_agent <-----"
+        return None
+
+middleware = MyMiddleware()
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+agent = create_agent(
+    model=model,
+    middleware=[middleware],
+)
+
+response = agent.invoke({
+    "messages": [HumanMessage("2的12次方等于几")]
+})
+
+for msg in response["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+2的12次方等于几
+==================================[1m Ai Message [0m==================================
+
+2 的 12 次方等于 **4096**。
+
+计算过程：
+$2^{10} = 1024$
+$2^{12} = 2^{10} \times 2^2 = 1024 \times 4 = 4096$
+
+```
+
+
+
+#### 举例代码2can_jump_to参数
+
+```
+from typing import Any
+from langchain.agents.middleware import before_model, after_model, AgentState, hook_config
+from langgraph.runtime import Runtime
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
+    FilesystemFileSearchMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+@tool
+def get_news() -> str:
+    """获取当日新闻"""
+    return f"美加墨世界杯今日开幕"
+
+
+class MyMiddleware(AgentMiddleware):
+    # 在模型（LLM）执行前触发。允许跳转到 "tools" 节点。
+    @hook_config(can_jump_to=["tools"])
+    def force_tool_first(state: AgentState,runtime:Runtime) -> dict[str, Any] | None:
+        """
+        【业务场景：强行拦截并触发工具】
+        如果用户输入包含 "direct tool"，则跳过本次大模型的思考/生成阶段，
+        直接伪造一个大模型的 tool_calls 意图，强行把控制权移交给工具执行节点。
+        """
+        text = state["messages"][-1].content
+        if isinstance(text,str) and "direct tool" in text:
+            print("[MIDDLEWARE] before_model: jump_to='tools'")
+
+            # 人工构造一个大模型的消息对象（AIMessage）
+            # 欺骗系统，让系统误以为这是模型自己决定要调用的工具
+            fake_toolcall=AIMessage(
+                content="人工构造消息",
+                tool_calls=[
+                    {
+                        "name":"get_news",
+                        "args":{},
+                         "id": "call_force_weather_001",
+                    }
+                ]
+            )
+
+            # 返回更新后的状态：注入伪造的消息，并明确指定下一步跳转到 "tools" 节点
+            return {
+                "messages":[fake_toolcall],
+                "jump_to":"tools",
+            }
+        # 如果不满足触发条件，返回 None，流程正常向下流转（继续让 LLM 思考）
+        return None
+
+    # 在模型（LLM）执行生成之后触发。允许重新跳转回 "model" 节点。
+    @hook_config(can_jump_to=["model"])
+    def retry_with_extra_instruction(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        """
+        【业务场景：反思/重试机制】
+        如果大模型已经生成了回答，但发现用户最初的请求包含 "retry model"，
+        则动态追加一条系统提示词（SystemMessage），强行让模型重新生成（重试）一次。
+        """
+        # 倒序遍历消息历史，找到最近的一次用户输入（human 消息）
+        user_text = ""
+        for msg in reversed(state["messages"]):
+            if getattr(msg,"type","") == "human":
+                user_text = getattr(msg,"content","")
+                break
+        # 检查用户输入是否包含触发重试的关键字
+        if isinstance(user_text,str) and "retry model" in user_text.lower():
+             # 【核心防御】：防止无限循环重跳（死循环）
+             # 检查消息历史中是否已经注入过这条特殊的系统提示。如果有，说明已经重试过了，不再重复干预。
+             already_injected = any(
+               isinstance(getattr(msg,"content",None),str)
+               and "你必须以【二次回答】开头" in msg.content
+               for msg in state["messages"]
+             )
+             if already_injected:
+                 return None  # 已注入过，直接放行，结束重试流程
+             print("[MIDDLEWARE] retry_with_extra_instruction: jump_to='model' with extra system instruction")
+             # 返回更新后的状态：追加强力约束的系统消息，并将指针跳回 "model" 节点重新执行
+             return {
+                 "messages":[SystemMessage("你必须以【二次回答】开头，并且只用一句话回答。")],
+                 "jump_to":"model",
+             }
+
+
+    # 在模型（LLM）执行前触发。允许直接跳转到 "end" 节点（强行终止）。
+    @hook_config(can_jump_to=["end"])
+    def overflow_context_processor(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        """
+        【业务场景：安全卫士/异常拦截】
+        模拟上下文窗口溢出（Token超限）或其他严重的系统阻断情况。
+        一旦触发，直接熔断流程，拒绝让大模型继续处理，直接报错或返回兜底文案。
+        """
+        # 假装溢出,模拟检查最后一条消息是否包含 overflow 标识
+        if "overflow" in state["messages"][-1].content:
+            print("[MIDDLEWARE] before_model: jump_to='end' when contenxt window overflow")
+
+            # 构造兜底的结束消息，并直接指定跳转到 "end" 终止 Agent 运行
+            return {
+                "messages":[AIMessage("上下文窗口溢出，终止")],
+                "jump_to":"end",
+            }
+
+middleware = MyMiddleware() # 实例化中间件对象
+
+agent = create_agent(
+    model=model,
+    tools=[get_news],
+    # # 将定义的中间件按照顺序挂载到 Agent 中（注意：执行顺序会严格按照列表声明顺序）
+    middleware=[middleware],
+)
+
+def run_once(user_input:str):
+    resp = agent.invoke({
+        "messages":[{"role": "user", "content": user_input}]
+    })
+
+    for msg in resp["messages"]:
+        msg.pretty_print()
+
+if __name__ == "__main__":
+    # Case 1: 直接跳 tools
+    # 预期表现：
+    # 1. 触发 force_tool_first，打印 "[MIDDLEWARE] before_model: jump_to='tools'"
+    # 2. 绕过 LLM 的首轮思考，直接调用 `get_news` 工具
+    # 3. 工具返回结果后，LLM 总结工具结果并输出
+    print('=' * 30, '-> Case 1 <-', '=' * 30)
+    run_once("请帮我查今日新闻 direct tool")
+
+    # Case 2: 输出后跳回 model
+    # 预期表现：
+    # 1. 正常进入 LLM 生成第 1 版回答
+    # 2. 触发 retry_with_extra_instruction，打印 "[MIDDLEWARE] after_model: jump_to='model'..."
+    # 3. 注入系统提示词后，LLM 被强行拉回并生成第 2 版回答
+    # 4. 最终输出应带有“【二次回答】”前缀
+    print('=' * 30, '-> Case 2 <-', '=' * 30)
+    run_once("请随便介绍一下 LangChain retry model")
+
+    # Case 3:
+    # 预期表现：
+    # 1. 触发 overflow_context_processor 中间件
+    # 2. 直接打印终止信息并退出，LLM 根本不会接收到这个请求
+    print('=' * 30, '-> Case 3 <-', '=' * 30)
+    run_once("你好 overflow")
+    # Case 4: 正常流程
+    # 预期表现：
+    # 1. 没有任何中间件被触发（不满足任何关键字）
+    # 2. Agent 走正常的 OOTB（Out of the box）标准工作流：User -> Model -> Call Tool -> Model -> End
+    print('=' * 30, '-> Case 4 <-', '=' * 30)
+    run_once("今日新闻摘要？")
+```
+
+
+
+#### agent 输出
+
+````
+============================== -> Case 1 <- ==============================
+================================[1m Human Message [0m=================================
+
+请帮我查今日新闻 direct tool
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_news (call_exaec07q)
+ Call ID: call_exaec07q
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+美加墨世界杯今日开幕
+==================================[1m Ai Message [0m==================================
+
+今日新闻：美加墨世界杯今日开幕。
+============================== -> Case 2 <- ==============================
+================================[1m Human Message [0m=================================
+
+请随便介绍一下 LangChain retry model
+==================================[1m Ai Message [0m==================================
+
+# LangChain Retry Model 介绍
+
+LangChain 的 **Retry Model（重试模型）** 是指在处理链式调用或大语言模型交互时，当某一环节（如 API 请求、工具调用等）失败后自动进行重试的机制。这是提高应用健壮性和成功率的重要设计。
+
+## 核心特点
+
+### 1. **重试机制原理**
+```python
+from langchain_core.retries import RetryCondition
+from langchain_retry_models import RetryModel
+
+# 当遇到特定错误时（如 API 429、超时等），自动触发重试策略
+retry_model = RetryModel(max_retries=3, wait_time=5)
+```
+
+### 2. **适用场景**
+- LLM 服务响应超时而失败
+- API 限流导致请求被拒绝（HTTP 429）
+- 网络波动或中间故障
+- 工具调用函数执行异常
+
+### 3. **常见配置参数**
+| 参数 | 说明 | 示例值 |
+|------|------|--------|
+| `max_retries` | 最大重试次数 | 3~5 |
+| `wait_time` | 首次等待时间（指数退避） | 10秒左右 |
+| `retry_conditions` | 触发重试的错误类型列表 | `[429, 500, Timeout]` |
+
+### 4. **优势**
+- 提高成功调用率，避免因瞬间故障中断流程
+- 减少服务抖动对业务的影响
+- 提升用户体验的稳定性
+
+### 5. **注意事项**
+⚠️ 建议设置重试次数上限，防止无限循环  
+⚠️ 需要避免重复提交相同请求  
+⚠️ 可配合指数退避算法（Exponential Backoff）优化等待策略  
+
+如需更详细的配置示例或源码说明，可以查看 LangChain 官方文档 `~core/retries/` 相关路径。
+============================== -> Case 3 <- ==============================
+================================[1m Human Message [0m=================================
+
+你好 overflow
+==================================[1m Ai Message [0m==================================
+
+你好！😊 很高兴见到你！有什么可以帮助你的吗？我可以帮你查询新闻、解答问题，或者做其他的的事情。请告诉我你需要什么帮助～
+============================== -> Case 4 <- ==============================
+================================[1m Human Message [0m=================================
+
+今日新闻摘要？
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_news (call_08rbgbs8)
+ Call ID: call_08rbgbs8
+  Args:
+=================================[1m Tool Message [0m=================================
+Name: get_news
+
+美加墨世界杯今日开幕
+==================================[1m Ai Message [0m==================================
+
+今日有一条重要新闻：美加墨世界杯已正式开幕。
+
+````
+
+
 
 ### 5.3.2两种方法的统一
 
