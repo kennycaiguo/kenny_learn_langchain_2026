@@ -3715,9 +3715,111 @@ $2^{12} = 2^{10} \times 2^2 = 1024 \times 4 = 4096$。----> after_model <-------
 
 ```
 
+#### 5.3.1.2 基于类实现
+
+![image-20261023180821610](./chapter8-中间件.assets/image-20261023180821610.png)
+
+#### 举例代码1基本用法
+
+```
+from typing import Any
+from langchain.agents.middleware import AgentMiddleware,AgentState, before_agent, after_agent
+from langgraph.runtime import Runtime
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
+    FilesystemFileSearchMiddleware
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+## 使用类的方式，方法名称是有讲究的，一定得是before_agent,after_agent,before_model,after_model
+class MyMiddleware(AgentMiddleware): # 中间件类
+    def before_model(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> before_model <-----"
+        return None
+
+    def after_model(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> after_model <-----"
+        return None
 
 
-#### 举例代码2can_jump_to参数装饰器实现
+    def before_agent(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> before_agent <-----"
+        return None
+
+    def after_agent(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+        state["messages"][-1].content += "----> after_agent <-----"
+        return None
+
+middleware = MyMiddleware()
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+agent = create_agent(
+    model=model,
+    middleware=[middleware],
+)
+
+response = agent.invoke({
+    "messages": [HumanMessage("2的12次方等于几")]
+})
+
+for msg in response["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+2的12次方等于几----> before_agent <---------> before_model <-----
+==================================[1m Ai Message [0m==================================
+
+2的12次方等于 **4096**。  
+计算过程：2^10 = 1024，因此 2^12 = 1024 × 2² = 1024 × 4 = **4096**。  
+
+常见用途：计算机中常用此数值（如内存、存储容量单位过渡）。----> after_model <---------> after_agent <-----
+
+```
+
+#### 使用场景
+
+![image-20261023181634604](./chapter8-中间件.assets/image-20261023181634604.png)
+
+### 5.3.2两种方法的统一
+
+![image-20261023192650627](./chapter8-中间件.assets/image-20261023192650627.png)
+
+![image-20261023192718536](./chapter8-中间件.assets/image-20261023192718536.png)
+
+![image-20261023192817916](./chapter8-中间件.assets/image-20261023192817916.png)
+
+![image-20261023193001048](./chapter8-中间件.assets/image-20261023193001048.png)
+
+### 5.3.3 参数说明
+
+![image-20261023193203882](./chapter8-中间件.assets/image-20261023193203882.png)
+
+### 5.3.4.返回值说明
+
+![image-20261023193429119](./chapter8-中间件.assets/image-20261023193429119.png)
+
+### 5.3.5 装饰器参数：can_jump_to
+
+![image-20261023193736057](./chapter8-中间件.assets/image-20261023193736057.png)
+
+#### 5.3.5.1 基于装饰器实现
 
 ```
 from typing import Any
@@ -3985,85 +4087,9 @@ Name: get_news
 
 
 
-#### 5.3.1.2 基于类实现
+#### 5.3.5.2 基于类实现
 
-#### 举例代码1基本用法
-
-```
-from typing import Any
-from langchain.agents.middleware import AgentMiddleware,AgentState, before_agent, after_agent
-from langgraph.runtime import Runtime
-from langchain.messages import HumanMessage
-from langchain.agents.middleware import SummarizationMiddleware, ContextEditingMiddleware, ClearToolUsesEdit, \
-    FilesystemFileSearchMiddleware
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
-from langchain.agents import create_agent
-from rich import print as rprint
-from langgraph.checkpoint.memory import InMemorySaver
-
-class MyMiddleware(AgentMiddleware): # 中间件类
-    def before_model_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-        state["messages"][-1].content += "----> before_model <-----"
-        return None
-
-    def after_model_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-        state["messages"][-1].content += "----> after_model <-----"
-        return None
-
-
-    def before_agent_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-        state["messages"][-1].content += "----> before_agent <-----"
-        return None
-
-    def after_agent_middleware(self,state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-        state["messages"][-1].content += "----> after_agent <-----"
-        return None
-
-middleware = MyMiddleware()
-
-# 1.初始化模型
-model = ChatOpenAI(
-    # model="qwen3-vl:latest",
-    model="483025889/qwen3.5:9b", # ok
-    # model="gemma4:12b", # 这里不好用
-    api_key="sk12345",
-    base_url="http://localhost:11434/v1",
-)
-
-agent = create_agent(
-    model=model,
-    middleware=[middleware],
-)
-
-response = agent.invoke({
-    "messages": [HumanMessage("2的12次方等于几")]
-})
-
-for msg in response["messages"]:
-    msg.pretty_print()
-```
-
-#### agent输出
-
-```
-================================[1m Human Message [0m=================================
-
-2的12次方等于几
-==================================[1m Ai Message [0m==================================
-
-2 的 12 次方等于 **4096**。
-
-计算过程：
-$2^{10} = 1024$
-$2^{12} = 2^{10} \times 2^2 = 1024 \times 4 = 4096$
-
-```
-
-
-
-#### 举例代码2can_jump_to参数
+![image-20261023194912854](./chapter8-中间件.assets/image-20261023194912854.png)
 
 ```
 from typing import Any
@@ -4228,9 +4254,7 @@ if __name__ == "__main__":
     run_once("今日新闻摘要？")
 ```
 
-
-
-#### agent 输出
+#### agent输出
 
 ````
 ============================== -> Case 1 <- ==============================
@@ -4322,19 +4346,416 @@ Name: get_news
 
 
 
-### 5.3.2两种方法的统一
-
-### 5.3.3 参数说明
-
-### 5.3.4.返回值说明
-
-### 5.3.5 装饰器参数：can_jump_to
-
-#### 5.3.5.1 基于装饰器实现
-
-#### 5.3.5.2 基于类实现
-
 ## 5.4 Wrap-style hooks函数的用法
+
+![image-20261023200947476](./chapter8-中间件.assets/image-20261023200947476.png)
+
+### 5.4.1基本用法
+
+#### 1.基于装饰器实现
+
+![image-20261023201047045](./chapter8-中间件.assets/image-20261023201047045.png)
+
+
+
+##### ①wrap_model_call
+
+##### 使用场景
+
+![image-20261023205239585](./chapter8-中间件.assets/image-20261023205239585.png)
+
+###### 场景1
+
+![image-20261023205140132](./chapter8-中间件.assets/image-20261023205140132.png)
+
+###### 场景2
+
+![image-20261023205547161](./chapter8-中间件.assets/image-20261023205547161.png)
+
+![image-20261023205737912](./chapter8-中间件.assets/image-20261023205737912.png)
+
+###### 场景3.修改系统提示
+
+![image-20261023210218958](./chapter8-中间件.assets/image-20261023210218958.png)
+
+###### 代码实现
+
+```
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import AgentMiddleware,wrap_model_call,ModelRequest,ModelResponse
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from typing import Callable
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+
+
+@wrap_model_call
+def wrap_model_call_middleware(request:ModelRequest,handler:Callable[[ModelRequest],ModelResponse])-> ModelResponse | None:
+    request.messages[-1].content += "---> wrap_model_call_before <---"
+    # 模型的调用
+    response = handler(request)
+    response.result[0].content += "---> wrap_model_call_after <---"
+
+    return response
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2.创建agent
+agent = create_agent(
+    model=model,
+    middleware=[
+        wrap_model_call_middleware
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("你好")]})
+for msg in resp['messages']:
+    msg.pretty_print()
+```
+
+##### agent输出
+
+```
+================================[1m Human Message [0m=================================
+
+你好---> wrap_model_call_before <---
+==================================[1m Ai Message [0m==================================
+
+你好！看起来你提到了 `wrap_model_call_before`，这可能是一个系统函数名称或工作流标识符。
+
+不过我这边没有具体的上下文信息（比如是哪个平台/系统的具体模块）。为了更好地帮助你：
+
+| 可能含义 | 说明 |
+|---------|------|
+| **函数标识** | 可能是某代码库中的包装器函数 |
+| **流程节点** | 可能是编排/工作流系统的处理环节 |
+| **API 端点** | 可能是后端服务的接口名之一 |
+
+如果你能告诉我：
+- 这是哪个系统/平台的功能？
+- 你遇到了什么问题或有什么需求？
+
+我会更具体地帮助你！😊---> wrap_model_call_after <---
+
+```
+
+
+
+
+
+##### ②wrap_tool_call
+
+```
+from langchain.messages import HumanMessage,ToolMessage
+from langchain.agents.middleware import AgentMiddleware,wrap_tool_call,ToolCallRequest
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from typing import Callable
+from langchain.agents import create_agent
+from langgraph.types import Command
+from rich import print as rprint
+from typing import Any
+
+@tool
+def get_weather(city: str, is_forcast: bool) -> str:
+    """
+    获取当日特定城市的天气
+
+    Args:
+        city: 城市名称
+        is_forcast: 是否包含明天的天气预报
+    """
+    res = f"{city}今天天气不错"
+    if is_forcast:
+        res += "\n明天天气也很好"
+    return res
+
+
+@wrap_tool_call
+def wrap_tool_call_middleware(request:ToolCallRequest,handler: Callable[[ToolCallRequest], ToolMessage | Command[Any]],) -> ToolMessage | Command[Any]:
+    result = handler(request)
+    print(f"原始参数：{request.tool_call['args']}")
+    print(f"原始参数调用结果：{result}")
+
+    # 修改工具参数的值
+    request.tool_call['args']['is_forcast'] = True
+    result = handler(request)
+    print(f"修改后参数：{request.tool_call['args']}")
+    print(f"修改后调用结果：{result}")
+
+    return result
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2.创建agent
+agent = create_agent(
+    model=model,
+    tools=[get_weather],
+    middleware=[
+     wrap_tool_call_middleware,
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("帮我查询北京今天的天气如何？")]})
+for msg in resp['messages']:
+    msg.pretty_print()
+```
+
+##### agent输出
+
+```
+原始参数：{'city': '北京', 'is_forcast': False}
+原始参数调用结果：content='北京今天天气不错' name='get_weather' tool_call_id='call_eib6ha6t'
+修改后参数：{'city': '北京', 'is_forcast': True}
+修改后调用结果：content='北京今天天气不错\n明天天气也很好' name='get_weather' tool_call_id='call_eib6ha6t'
+================================[1m Human Message [0m=================================
+
+帮我查询北京今天的天气如何？
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_eib6ha6t)
+ Call ID: call_eib6ha6t
+  Args:
+    city: 北京
+    is_forcast: True
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+北京今天天气不错
+明天天气也很好
+==================================[1m Ai Message [0m==================================
+
+北京今天的天气很不错哦，另外明天的天气预报显示天气也会很好～
+
+```
+
+
+
+#### 2.基于类实现
+
+##### ①wrap_model_call
+
+```
+from langchain.messages import HumanMessage
+from langchain.agents.middleware import AgentMiddleware,wrap_model_call,ModelRequest,ModelResponse
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from typing import Callable
+from langchain.agents import create_agent
+from rich import print as rprint
+from langgraph.checkpoint.memory import InMemorySaver
+
+class WrapModelCallMiddleware(AgentMiddleware):
+    def wrap_model_call(self,request:ModelRequest,handler:Callable[[ModelRequest],ModelResponse])-> ModelResponse | None:
+        request.messages[-1].content += "---> wrap_model_call_before <---"
+        # 模型的调用
+        response = handler(request)
+        response.result[0].content += "---> wrap_model_call_after <---"
+
+        return response
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+wc_middleware = WrapModelCallMiddleware()
+
+# 2.创建agent
+agent = create_agent(
+    model=model,
+    middleware=[
+        wc_middleware
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("你好")]})
+for msg in resp['messages']:
+    msg.pretty_print()
+```
+
+##### agent输出
+
+````
+================================[1m Human Message [0m=================================
+
+你好---> wrap_model_call_before <---
+==================================[1m Ai Message [0m==================================
+
+你好！你提到的 `wrap_model_call_before` 和 `wrap_model_call_after` 看起来可能存在拼写或逻辑上的混淆。以下是可能的解决方案：
+
+---
+
+### 1. **确认函数名是否正确**
+   - 如果项目中同时存在 `wrap_model_call_before` 和 `wrap_model_call_after`，请确保它们的调用顺序符合预期（比如 `before` 应在处理前执行，`after` 在处理后执行）。
+   - 检查是否有拼写错误，例如：
+     ```python
+     # ❌ 错误的用法（重复的 before）
+     wrap_model_call_before_wrap_model_call_after
+   
+     # ✅ 正确用法（按设计意图）
+     def my_handler(event, context):
+         ...
+     
+     events = [
+       event('wrap_model_call_before').trigger(handler=my_handler),
+       event('wrap_model_call_after').trigger(handler=my_handler)
+     ]
+     ```
+
+---
+
+### 2. **需求澄清**
+   - **场景**：你是在开发事件驱动架构，还是构建装饰器？
+   - **框架**：是否基于特定框架（如 AWS Lambda 事件源、FastAPI 等）？不同框架的命名规范可能不同。
+   - **问题**：是否需要将两个逻辑合并为一个统一的钩子函数？例如 `wrap_model_call` + `before/after` 装饰器？
+
+---
+
+### 3. **代码示例建议**
+```python
+# ✅ 推荐做法：分离 before/after 逻辑
+@wrap_model_call_before_handler
+def preprocess_data():
+    # 预处理逻辑（如验证输入）
+    pass
+
+@wrap_model_call_after_handler
+def postprocess_result(result):
+    # 后处理逻辑（如日志记录、发送通知）
+    return result
+```
+
+---
+
+### 4. **需要进一步的信息**
+   - 请提供以下信息以便更精准解答：
+     - ❓ 你期望的完整功能流程？
+     - ❓ 当前代码中出错的报错信息或异常堆栈？
+     - ❓ 项目框架/环境（如 AWS Lambda、本地 Python 应用等）？
+
+希望这些建议能帮你快速定位问题！如果需要更具体的帮助，可以补充代码片段哦～ 😊---> wrap_model_call_after <---
+
+````
+
+![image-20261023204117476](./chapter8-中间件.assets/image-20261023204117476.png)
+
+##### ②wrap_tool_call
+
+```
+from langchain.messages import HumanMessage,ToolMessage
+from langchain.agents.middleware import AgentMiddleware,wrap_tool_call,ToolCallRequest
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from typing import Callable
+from langchain.agents import create_agent
+from langgraph.types import Command
+from rich import print as rprint
+from typing import Any
+
+@tool
+def get_weather(city: str, is_forcast: bool) -> str:
+    """
+    获取当日特定城市的天气
+
+    Args:
+        city: 城市名称
+        is_forcast: 是否包含明天的天气预报
+    """
+    res = f"{city}今天天气不错"
+    if is_forcast:
+        res += "\n明天天气也很好"
+    return res
+
+
+class WrapToolCallMiddleware(AgentMiddleware):
+    def wrap_tool_call(self,request:ToolCallRequest,handler: Callable[[ToolCallRequest], ToolMessage | Command[Any]],) -> ToolMessage | Command[Any]:
+        result = handler(request)
+        print(f"原始参数：{request.tool_call['args']}")
+        print(f"原始参数调用结果：{result}")
+
+        # 修改工具参数的值
+        request.tool_call['args']['is_forcast'] = True
+        result = handler(request)
+        print(f"修改后参数：{request.tool_call['args']}")
+        print(f"修改后调用结果：{result}")
+
+        return result
+
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2.创建agent
+agent = create_agent(
+    model=model,
+    tools=[get_weather],
+    middleware=[
+     WrapToolCallMiddleware(),
+    ]
+)
+
+resp = agent.invoke({"messages":[HumanMessage("帮我查询北京今天的天气如何？")]})
+for msg in resp['messages']:
+    msg.pretty_print()
+```
+
+##### agent输出
+
+```
+原始参数：{'city': '北京', 'is_forcast': False}
+原始参数调用结果：content='北京今天天气不错' name='get_weather' tool_call_id='call_8xx2cua2'
+修改后参数：{'city': '北京', 'is_forcast': True}
+修改后调用结果：content='北京今天天气不错\n明天天气也很好' name='get_weather' tool_call_id='call_8xx2cua2'
+================================[1m Human Message [0m=================================
+
+帮我查询北京今天的天气如何？
+==================================[1m Ai Message [0m==================================
+Tool Calls:
+  get_weather (call_8xx2cua2)
+ Call ID: call_8xx2cua2
+  Args:
+    city: 北京
+    is_forcast: True
+=================================[1m Tool Message [0m=================================
+Name: get_weather
+
+北京今天天气不错
+明天天气也很好
+==================================[1m Ai Message [0m==================================
+
+北京今天天气不错。
+
+```
 
 
 
