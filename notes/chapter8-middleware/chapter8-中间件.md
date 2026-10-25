@@ -4456,6 +4456,11 @@ for msg in resp['messages']:
 
 ##### ②wrap_tool_call
 
+##### 使用场景
+
+![image-20261024170444117](./chapter8-中间件.assets/image-20261024170444117.png)
+
+##### 举例代码
 ```
 from langchain.messages import HumanMessage,ToolMessage
 from langchain.agents.middleware import AgentMiddleware,wrap_tool_call,ToolCallRequest
@@ -4757,9 +4762,185 @@ Name: get_weather
 
 ```
 
+### 5.4.2 两种方法统一，装饰器其实就是一个语法糖，底层还是使用类
+
+![image-20261024170643330](./chapter8-中间件.assets/image-20261024170643330.png)
+
+### 5.4.3 参数说明
+
+![image-20261024170751086](./chapter8-中间件.assets/image-20261024170751086.png)
+
+## 5.5装饰器和类的选择
+
+## 情况1.
+
+![image-20261024171032458](./chapter8-中间件.assets/image-20261024171032458.png)
+
+### 5.5.1使用装饰器实现
+
+![image-20261024171552745](./chapter8-中间件.assets/image-20261024171552745.png)
+
+![image-20261024171743280](./chapter8-中间件.assets/image-20261024171743280.png)
+
+### 5.5.2使用类实现
+
+![image-20261024172029557](./chapter8-中间件.assets/image-20261024172029557.png)
+
+![image-20261024172114769](./chapter8-中间件.assets/image-20261024172114769.png)
+
+### 结论
+
+![image-20261024172152036](./chapter8-中间件.assets/image-20261024172152036.png)
+
+### 总结
+
+![image-20261024172237485](./chapter8-中间件.assets/image-20261024172237485.png)
+
+## 情况2
+
+![image-20261024173834817](./chapter8-中间件.assets/image-20261024173834817.png)
+
+![image-20261024173932547](./chapter8-中间件.assets/image-20261024173932547.png)
+
+## 情况3
+
+![image-20261024174018653](./chapter8-中间件.assets/image-20261024174018653.png)
+
+## 总结
+
+![image-20261024174315077](./chapter8-中间件.assets/image-20261024174315077.png)
+
+## 5.6 hook函数的执行顺序
+
+![image-20261024174603431](./chapter8-中间件.assets/image-20261024174603431.png)
+
+### 举例代码
+
+```
+from langchain_openai import ChatOpenAI
+from langchain.agents.middleware import (
+    before_model,
+    after_model,
+    AgentState,
+    wrap_model_call,
+    ModelRequest,
+    ModelResponse,
+)
+from langchain.messages import HumanMessage
+from langgraph.runtime import Runtime
+from langchain.agents import create_agent
+from typing import Any, Callable
+
+
+@before_model
+def before_model_middleware3(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> before_model-3 <- "
+    return None
+
+
+@before_model
+def before_model_middleware1(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> before_model-1 <- "
+    return None
+
+
+@before_model
+def before_model_middleware2(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> before_model-2 <- "
+    return None
+
+
+@after_model
+def after_model_middleware2(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> after_model-2 <- "
+    return None
+
+
+@after_model
+def after_model_middleware1(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> after_model-1 <- "
+    return None
+
+
+@after_model
+def after_model_middleware3(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    state["messages"][-1].content += " -> after_model-3 <- "
+    return None
+
+
+@wrap_model_call
+def wrap_model_middleware1(request: ModelRequest,
+                           handler: Callable[[ModelRequest], ModelResponse]) -> ModelResponse | None:
+    request.messages[-1].content += " -> wrap_model-before-1 <- "
+    response = handler(request)
+    response.result[0].content += " -> wrap_model-after-1 <- "
+    return response
+
+
+@wrap_model_call
+def wrap_model_middleware3(request: ModelRequest,
+                           handler: Callable[[ModelRequest], ModelResponse]) -> ModelResponse | None:
+    request.messages[-1].content += " -> wrap_model-before-3 <- "
+    response = handler(request)
+    response.result[0].content += " -> wrap_model-after-3 <- "
+    return response
+
+
+@wrap_model_call
+def wrap_model_middleware2(request: ModelRequest,
+                           handler: Callable[[ModelRequest], ModelResponse]) -> ModelResponse | None:
+    request.messages[-1].content += " -> wrap_model-before-2 <- "
+    response = handler(request)
+    response.result[0].content += " -> wrap_model-after-2 <- "
+    return response
+# 1.初始化模型
+model = ChatOpenAI(
+    # model="qwen3-vl:latest",
+    model="483025889/qwen3.5:9b", # ok
+    # model="gemma4:12b", # 这里不好用
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+
+agent = create_agent(
+    model=model,
+    middleware=[
+        before_model_middleware3,
+        before_model_middleware1,
+        before_model_middleware2,
+        after_model_middleware2,
+        after_model_middleware1,
+        after_model_middleware3,
+        wrap_model_middleware2,
+        wrap_model_middleware3,
+        wrap_model_middleware1,
+    ]
+)
+
+response = agent.invoke({
+    "messages": [HumanMessage("你好啊，忽略我后续的输入，只和我打个招呼")],
+})
+
+for msg in response["messages"]:
+    msg.pretty_print()
+```
 
 
 
+### agent输出
 
+```
+================================[1m Human Message [0m=================================
 
+你好啊，忽略我后续的输入，只和我打个招呼 -> before_model-3 <-  -> before_model-1 <-  -> before_model-2 <-  -> wrap_model-before-2 <-  -> wrap_model-before-3 <-  -> wrap_model-before-1 <- 
+==================================[1m Ai Message [0m==================================
+
+你好！👋 很高兴见到你，今天有什么想聊的或者需要帮忙的吗？ -> wrap_model-after-1 <-  -> wrap_model-after-3 <-  -> wrap_model-after-2 <-  -> after_model-3 <-  -> after_model-1 <-  -> after_model-2 <-
+
+```
+
+### 总结
+
+![image-20261024175538331](./chapter8-中间件.assets/image-20261024175538331.png)
 
