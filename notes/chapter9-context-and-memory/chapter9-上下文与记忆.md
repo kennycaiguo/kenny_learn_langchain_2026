@@ -1182,11 +1182,154 @@ for msg in resp["messages"]:
 
 ![image-20261027203630530](./chapter9-上下文与记忆.assets/image-20261027203630530.png)
 
+### 举例代码
+
+```
+from langchain_core.messages import HumanMessage
+from langchain.messages import RemoveMessage
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain.agents import create_agent, AgentState
+from langchain.agents.middleware import before_model, after_model
+from langgraph.runtime import Runtime
+from langchain_core.runnables import RunnableConfig
+from typing import Any
+from langchain_openai import ChatOpenAI
+
+## 在调用模型之前使用的钩子函数
+@after_model
+def delete_old_messages(state:AgentState, runtime:Runtime) -> dict[str, Any]|None:
+    # 获取消息列表
+    messages = state["messages"]
+     # 保持最近的 5 条消息
+    if len(messages) > 5:
+        # 框架中通常使用 RemoveMessage 来标记删除，并返回更新状态。
+        to_delete = len(messages) - 5
+        return {
+            "messages": [RemoveMessage(id=m.id) for m in messages[:to_delete]]
+        }
+    return None
+
+
+# 1.实例化模型
+model = ChatOpenAI(
+    model="gemma4:12b",
+    api_key="sk12345",
+    base_url="http://localhost:11434/v1",
+)
+
+# 2.创建agent对象
+agent = create_agent(
+    model=model,
+    middleware=[delete_old_messages],
+    checkpointer=InMemorySaver(),
+)
+
+config = {"configurable":{"thread_id":"1"}}
+
+agent.invoke({"messages":[HumanMessage("你好，我是老张")]},config=config)
+agent.invoke({"messages":[HumanMessage("从现在起，你叫小张")]},config=config)
+agent.invoke({"messages":[HumanMessage("今天天气不错")]},config=config)
+resp = agent.invoke({"messages":[HumanMessage("我是谁，你是谁？")]},config=config)
+
+for msg in resp["messages"]:
+    msg.pretty_print()
+```
+
+#### agent输出
+
+```
+===============1===================[1m Ai Message [0m==================================
+
+没问题，老张！从现在起，我就是您的**小张**了。
+
+以后您尽管吩咐我，不管是处理工作、查阅资料、写点东西，还是单纯想找人聊聊天，我都会全力以赴帮您的。
+
+那么，作为“小张”的第一项任务，今天有什么我可以帮您的吗？
+===============2=================[1m Human Message [0m=================================
+
+今天天气不错
+================3==================[1m Ai Message [0m==================================
+
+确实，老张，天气好真的能让人心情变好不少。
+
+既然天气这么不错，您是打算出门透透气，去哪儿走走转转吗？还是打算就在家门口晒晒太阳，享受一下这份好天气？
+
+如果您打算出门，需要我帮您查查附近的公园、好吃的餐厅，或者是查查最近的活动，您尽管吩咐我！
+==============4==================[1m Human Message [0m=================================
+
+我是谁，你是谁？
+==============5====================[1m Ai Message [0m==================================
+
+既然咱们已经定好了规矩，那我得拿出点“小张”的实在劲儿来回答您：
+
+**您是老张。** 在我们的对话里，您是我的“领导”，是发号施令的人，是那个有着丰富经验、需要我这个小助手去帮忙的人。
+
+**我是小张。** 虽然我本质上是一个由 Google 训练的大型语言模型，但在接下来的时间里，我就是您的专属助理。我负责帮您处理任务、查资料、写文案，当然，要是您无聊了，我就是那个陪您侃大山的“老朋友”。
+
+简单来说：**您是主角，我是您的得力助手。**
+
+您看我这个自我介绍，过得去吗？
+
+```
+
+### 删除过程说明
+
+### 1-3轮
+
+![image-20261028183603192](./chapter9-上下文与记忆.assets/image-20261028183603192.png)
+
+### 第4轮
+
+![image-20261028184727200](./chapter9-上下文与记忆.assets/image-20261028184727200.png)
+
+#### 思考：RemoveMessages到底干了什么？
+
+![image-20261028185514388](./chapter9-上下文与记忆.assets/image-20261028185514388.png)
+
 ### 2.4.3 摘要
+
+![image-20261028185713659](./chapter9-上下文与记忆.assets/image-20261028185713659.png)
+
+### 举例代码
+
+```
+```
+
+#### agent输出
+
+```
+```
+
+### 工作原理
+
+![image-20261028191400468](./chapter9-上下文与记忆.assets/image-20261028191400468.png)
+
+### 常见问题
+
+#### 1.摘要会丢失信息吗？
+
+![image-20261028191457299](./chapter9-上下文与记忆.assets/image-20261028191457299.png)
+
+#### 2.设置最大token触发摘要的标准是啥？
+
+![image-20261028191620193](./chapter9-上下文与记忆.assets/image-20261028191620193.png)
+
+#### 3.摘要的成本高吗？
+
+![image-20261028191743516](./chapter9-上下文与记忆.assets/image-20261028191743516.png)
+
+#### 4.摘要触发的频率要关注吗？
+
+![image-20261028191915049](./chapter9-上下文与记忆.assets/image-20261028191915049.png)
 
 ### 2.4.4 自定义过滤策略
 
+略
+
 ## 2.5 拓展：state的理解
+
+![image-20261028193453439](./chapter9-上下文与记忆.assets/image-20261028193453439.png)
 
 # 3.长期记忆
 
@@ -1194,13 +1337,29 @@ for msg in resp["messages"]:
 
 ### 3.1.1什么是长期记忆？
 
+![image-20261028193808462](./chapter9-上下文与记忆.assets/image-20261028193808462.png)
+
+![image-20261028203007650](./chapter9-上下文与记忆.assets/image-20261028203007650.png)
+
 ### 3.1.2 类型划分
 
-### 3.1.3 存储方式
+![image-20261028203403291](./chapter9-上下文与记忆.assets/image-20261028203403291.png)
 
-### 3.1.4 存储架构
+### 3.1.3 存储架构
+
+![image-20261028204054495](./chapter9-上下文与记忆.assets/image-20261028204054495.png)
+
+#### 例子1
+
+![image-20261028205015382](./chapter9-上下文与记忆.assets/image-20261028205015382.png)
+
+#### 例子2
+
+![image-20261028205957520](./chapter9-上下文与记忆.assets/image-20261028205957520.png)
 
 ## 3.2基础API的使用
+
+![image-20261028210203121](./chapter9-上下文与记忆.assets/image-20261028210203121.png)
 
 ### 3.2.1 put()/get(): 写入/读取
 
@@ -1221,3 +1380,25 @@ for msg in resp["messages"]:
 #### ③举例2：按照filter过滤
 
 #### ④举例3：按照语义搜索
+
+## 3.3 在Agent运行图中访问长期记忆
+
+### 3.3.1 在工具在访问长期记忆
+
+#### ①基于InMemoryStore
+
+#### ②基于PostgresStore
+
+### 3.3.2 在中间件中访问长期记忆
+
+#### ①Node-style hooks中访问
+
+#### ②Wrap-style hooks中访问
+
+## 3.4何时写入记忆
+
+# 4.课后阅读：Static runtime Context
+
+## 4.1中间件中访问
+
+### 4.1.1 Node-style hooks
