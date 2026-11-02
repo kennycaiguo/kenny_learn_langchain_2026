@@ -1365,21 +1365,37 @@ for msg in resp["messages"]:
 
 #### ①put()源码剖析
 
+![image-20261101193917303](./chapter9-上下文与记忆.assets/image-20261101193917303.png)
+
 #### ②get()源码剖析
+
+![image-20261101194241568](./chapter9-上下文与记忆.assets/image-20261101194241568.png)
 
 #### ③举例1：基于InMemoryStore
 
+##### 参考这里： [长期记忆api_put_get基本使用-InMemoryStore](长期记忆api_put_get基本使用-InMemoryStore.md)
+
 #### ④举例2：基于PostgresStore
+
+##### 参考这里：[长期记忆api_put_get基本使用-PostgresStore](长期记忆api_put_get基本使用-PostgresStore.md)
 
 ### 3.2.2 search():搜索API
 
 #### ①源码剖析
 
+![image-20261101200928102](./chapter9-上下文与记忆.assets/image-20261101200928102.png)
+
 #### ②举例1：按照namespace前缀搜索
+
+##### 参考这里：[长期记忆基础api_search1](长期记忆基础api_search1.md)
 
 #### ③举例2：按照filter过滤
 
+##### 参考这里：[长期记忆基础api_search2](长期记忆基础api_search2.md)
+
 #### ④举例3：按照语义搜索
+
+##### 参考这里：[长期记忆基础api_search3](长期记忆基础api_search3.md)
 
 ## 3.3 在Agent运行图中访问长期记忆
 
