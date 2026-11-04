@@ -15,3 +15,6 @@ ollama的下载地址：https://ollama.com/download
 
 删除大模型： ollama rm 大模型名称，如ollama rm qwen3-vl:latest
 
+### 比较完整的笔记和代码：
+
+https://github.com/kennycaiguo/atguigu-note
