@@ -1,16 +1,20 @@
-from langchain_community.document_loaders import TextLoader
+# from langchain_community.document_loaders import TextLoader
+#
+# # loader = TextLoader("./test.txt")
+# # print(loader.load())
+#
+# loader = TextLoader(
+#     file_path="../asset/load/01-langchain-utf-8.txt",
+#     encoding="utf-8",
+# )
+#
+# docs = loader.load()
+# print(docs)
+# print(type(docs[0]))
+# print(docs[0].metadata)
+# print(docs[0].page_content)
 
-# loader = TextLoader("./test.txt")
-# print(loader.load())
+import fontTools
 
-loader = TextLoader(
-    file_path="../asset/load/01-langchain-utf-8.txt",
-    encoding="utf-8",
-)
-
-docs = loader.load()
-print(docs)
-print(type(docs[0]))
-print(docs[0].metadata)
-print(docs[0].page_content)
+print(fontTools.__version__)
 

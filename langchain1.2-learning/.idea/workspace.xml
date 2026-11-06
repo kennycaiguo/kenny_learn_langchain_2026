@@ -2,30 +2,18 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/01-langchain-gbk.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/01-langchain-utf-8.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/02-load.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/03-load.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/03-response.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/04-load.pdf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/04-sample.pdf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/05-sgg_chat.docx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/06-load.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/07-load.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/08-fun.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/08-fun_param.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/08-fun_retun.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/08-param_form.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/09-ai.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/09-ai1.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/10-test_doc.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/11-langchain.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/asset/load/12-test.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_1-document-loaders-txt-and-csv.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_2-document-loaders-json.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/demo1.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/test.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_3-document-loaders-pdf.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_4-document-loaders-word.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_5-document-loaders-markdown.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_6-document-loaders-html.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_7-document-loaders-file_directory.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_8-document-loaders-excel.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-Images.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-epub.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/python jq schema用法参考.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_2-document-loaders-json.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_2-document-loaders-json.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/demo1.py" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/demo1.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,26 +40,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.connectpg.executor": "Run",
-    "Python.demo1.executor": "Run",
-    "Python.fake_deepseek_server.executor": "Run",
-    "Python.practice-multi-features-assistant.executor": "Run",
-    "Python.testchecker.executor": "Run",
-    "Python.todolistmiddleware.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter10RAG-Retrieval-Augmented Generation",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.connectpg.executor&quot;: &quot;Run&quot;,
+    &quot;Python.demo1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.fake_deepseek_server.executor&quot;: &quot;Run&quot;,
+    &quot;Python.practice-multi-features-assistant.executor&quot;: &quot;Run&quot;,
+    &quot;Python.testchecker.executor&quot;: &quot;Run&quot;,
+    &quot;Python.todolistmiddleware.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter10RAG-Retrieval-Augmented Generation&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter10RAG-Retrieval-Augmented Generation" />
@@ -261,6 +249,9 @@
       <workItem from="1793669948629" duration="4081000" />
       <workItem from="1793751443419" duration="6112000" />
       <workItem from="1793836496749" duration="6607000" />
+      <workItem from="1793928049267" duration="3776000" />
+      <workItem from="1793978806270" duration="17954000" />
+      <workItem from="1794004705015" duration="2363000" />
     </task>
     <servers />
   </component>
@@ -268,7 +259,7 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/langchain1_2_learning$demo1.coverage" NAME="demo1 Coverage Results" MODIFIED="1793841642239" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation" />
+    <SUITE FILE_PATH="coverage/langchain1_2_learning$demo1.coverage" NAME="demo1 Coverage Results" MODIFIED="1793933112907" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation" />
     <SUITE FILE_PATH="coverage/langchain1_2_learning$testchecker.coverage" NAME="testchecker Coverage Results" MODIFIED="1792207687526" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level2/chapter8-middleware" />
     <SUITE FILE_PATH="coverage/langchain1_2_learning$todolistmiddleware.coverage" NAME="todolistmiddleware Coverage Results" MODIFIED="1792462314206" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level2/chapter8-middleware" />
     <SUITE FILE_PATH="coverage/langchain1_2_learning$fake_deepseek_server.coverage" NAME="fake_deepseek_server Coverage Results" MODIFIED="1793053239622" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level2/chapter8-middleware" />
