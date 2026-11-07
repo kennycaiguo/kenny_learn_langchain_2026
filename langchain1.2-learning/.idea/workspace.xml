@@ -2,18 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_3-document-loaders-pdf.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_4-document-loaders-word.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_5-document-loaders-markdown.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_6-document-loaders-html.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_7-document-loaders-file_directory.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_8-document-loaders-excel.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-Images.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-epub.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/python jq schema用法参考.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.2_2-RecursiveCharacterTextSplitter.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_2-document-loaders-json.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_2-document-loaders-json.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/demo1.py" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/demo1.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -252,6 +242,7 @@
       <workItem from="1793928049267" duration="3776000" />
       <workItem from="1793978806270" duration="17954000" />
       <workItem from="1794004705015" duration="2363000" />
+      <workItem from="1794069720840" duration="5252000" />
     </task>
     <servers />
   </component>
