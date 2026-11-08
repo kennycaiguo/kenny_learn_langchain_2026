@@ -2,8 +2,25 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.2_2-RecursiveCharacterTextSplitter.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_3-TokenTextSplitter.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_4-SemanticChunker.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_5-HtmlxxxSplitter.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_6-CodeTextSplitter.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_7-MarkdownTextSplitter.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_1-document-loaders-txt-and-csv.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_2-document-loaders-json.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_3-document-loaders-pdf.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_4-document-loaders-word.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_5-document-loaders-markdown.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_6-document-loaders-html.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_7-document-loaders-file_directory.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_8-document-loaders-excel.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-Images.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-epub.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.2_1-chartextsplitter.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.2_2-RecursiveCharacterTextSplitter.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/parsed_files/04-sample.pdf_file_0.zip" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,6 +43,9 @@
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="3KR9F4MNpmKgfg7y0Eq7Onaq7Ru" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -63,6 +83,11 @@
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter8-middleware\todo_workspace" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\utils" />
     </key>
+  </component>
+  <component name="RunAnythingCache">
+    <option name="myCommands">
+      <command value="CodeTextSplitter" />
+    </option>
   </component>
   <component name="RunManager" selected="Python.demo1">
     <configuration name="connectpg" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
@@ -243,6 +268,7 @@
       <workItem from="1793978806270" duration="17954000" />
       <workItem from="1794004705015" duration="2363000" />
       <workItem from="1794069720840" duration="5252000" />
+      <workItem from="1794153268701" duration="10165000" />
     </task>
     <servers />
   </component>
