@@ -1,0 +1,2 @@
+首先需要打开终端，定位到项目根目录，输入conda activate langchain1.2激活虚拟环境
+然后输入： pip install -r .\requirements_full.txt安装所有依赖

@@ -2,25 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_3-TokenTextSplitter.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_4-SemanticChunker.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_5-HtmlxxxSplitter.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_6-CodeTextSplitter.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.2document_splitters/ch10.2_7-MarkdownTextSplitter.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/knowledge.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/requirements_full.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/说明.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_1-document-loaders-txt-and-csv.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_2-document-loaders-json.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_3-document-loaders-pdf.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_4-document-loaders-word.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_5-document-loaders-markdown.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_6-document-loaders-html.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_7-document-loaders-file_directory.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_8-document-loaders-excel.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-Images.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.1_9-document-loaders-epub.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.2_1-chartextsplitter.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/ch10.2_2-RecursiveCharacterTextSplitter.ipynb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/parsed_files/04-sample.pdf_file_0.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_1-document-loaders-txt-and-csv.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_1-document-loaders-txt-and-csv.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_10-document-loaders-Images.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_10-document-loaders-Images.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_2-document-loaders-json.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_2-document-loaders-json.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_3-document-loaders-pdf.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_3-document-loaders-pdf.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_8-document-loaders-excel.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_8-document-loaders-excel.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_9-document-loaders-epub.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.1document_loaders/ch10.1_9-document-loaders-epub.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,33 +41,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.connectpg.executor&quot;: &quot;Run&quot;,
-    &quot;Python.demo1.executor&quot;: &quot;Run&quot;,
-    &quot;Python.fake_deepseek_server.executor&quot;: &quot;Run&quot;,
-    &quot;Python.practice-multi-features-assistant.executor&quot;: &quot;Run&quot;,
-    &quot;Python.testchecker.executor&quot;: &quot;Run&quot;,
-    &quot;Python.todolistmiddleware.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter10RAG-Retrieval-Augmented Generation&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.connectpg.executor": "Run",
+    "Python.demo1.executor": "Run",
+    "Python.fake_deepseek_server.executor": "Run",
+    "Python.practice-multi-features-assistant.executor": "Run",
+    "Python.testchecker.executor": "Run",
+    "Python.todolistmiddleware.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning" />
+      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter10RAG-Retrieval-Augmented Generation\10.3-embedding-model" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter10RAG-Retrieval-Augmented Generation" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter9-context-and-memory" />
-      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter8-middleware" />
-      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter7-agent" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning" />
@@ -269,6 +260,7 @@
       <workItem from="1794004705015" duration="2363000" />
       <workItem from="1794069720840" duration="5252000" />
       <workItem from="1794153268701" duration="10165000" />
+      <workItem from="1794267876404" duration="10450000" />
     </task>
     <servers />
   </component>
