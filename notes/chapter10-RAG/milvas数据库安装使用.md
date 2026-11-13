@@ -185,6 +185,19 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/milvus-io/milvus/maste
 
 ![image-20261111151753393](./milvas数据库安装使用.assets/image-20261111151753393.png)
 
+###### 比较严谨的代码如下
+
+```
+from rich import print as rprint
+
+client.use_database(db_name)
+# 在删除数据库之前，必须删除它里面的所有collection
+if len(client.list_collections(db_name=db_name))>0:
+    for col in client.list_collections():
+        client.drop_collection(col)
+client.drop_database(db_name)
+```
+
 ##### 执行完成后重新执行上面查看数据库的代码，就发现数据库已经被删除了
 
 ![image-20261111160952285](./milvas数据库安装使用.assets/image-20261111160952285.png)

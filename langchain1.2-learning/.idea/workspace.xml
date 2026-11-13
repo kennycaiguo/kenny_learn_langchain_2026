@@ -2,10 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4de3824-730a-4c79-b79d-f4568112a4fe" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus/milvus-ddl_collection_operation.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus/milvus-ddl_db_operation.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus/milvus-dml_operation.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.5-agen-knowledge-base/client-service-knowledge-base.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.5-agen-knowledge-base/knowledge.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus/milvus-ddl_collection_operation.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus/milvus-ddl_collection_operation.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus/milvus-ddl_db_operation.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus/milvus-ddl_db_operation.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,18 +51,18 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter10RAG-Retrieval-Augmented Generation/10.4milvus",
+    "last_opened_file_path": "G:/my_projects_2026/kenny_learn_langchain_2026/langchain1.2-learning/level2/chapter10RAG-Retrieval-Augmented Generation/10.5-agen-knowledge-base",
     "nodejs_package_manager_path": "npm",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter10RAG-Retrieval-Augmented Generation\10.5-agen-knowledge-base" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter10RAG-Retrieval-Augmented Generation\10.4milvus" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter10RAG-Retrieval-Augmented Generation\10.3-embedding-model" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning" />
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2\chapter10RAG-Retrieval-Augmented Generation" />
-      <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning\level2" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="G:\my_projects_2026\kenny_learn_langchain_2026\langchain1.2-learning" />
@@ -257,6 +258,7 @@
       <workItem from="1794267876404" duration="10450000" />
       <workItem from="1794337130399" duration="3857000" />
       <workItem from="1794429819239" duration="13408000" />
+      <workItem from="1794503801183" duration="13810000" />
     </task>
     <servers />
   </component>

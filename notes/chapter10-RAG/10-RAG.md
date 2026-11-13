@@ -3373,3 +3373,6 @@ generate_answer(q)
 答使用量超过月度额度的50%、升级部分订单不适用首购退款规则，或者已经开具专票但尚未完成
 红字发票流程。如果上下文不足以回答您的具体问题，请提供更多细节。
 ```
+
+### 我自己的程序，使用本地大模型，参考这里： [client-service-knowledge-base](client-service-knowledge-base.md)
+
